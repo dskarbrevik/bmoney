@@ -1,0 +1,13 @@
+[project]
+name = "budgetmoney"
+version = "0.1.0"
+description = "A Rocket Money transaction analyzer tool"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=6.29.5",
+    "jupyterlab>=4.3.4",
+    "pandas>=2.2.3",
+    "plotly>=5.24.1",
+    "ruff>=0.8.6",
+]
