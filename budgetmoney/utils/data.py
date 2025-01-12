@@ -1,0 +1,273 @@
+from budgetmoney.constants import MASTER_DF_FILENAME
+
+from pathlib import Path
+from datetime import timedelta, datetime
+from budgetmoney.constants import CAT_MAP
+
+import pandas as pd
+
+
+def has_csv_files(data_path: str) -> bool:
+    """Checks for csv files in a dir
+
+    Args:
+        data_path (str): dir path to check
+
+    Raises:
+        Exception: if data_path doesn't exist
+
+    Returns:
+        bool: whether the data_dir contains csv files
+    """
+
+    dir = Path(data_path)
+    if dir.is_dir():
+        return any(
+            [
+                True if file.is_file() and file.suffix == ".csv" else False
+                for file in Path(data_path).iterdir()
+            ]
+        )
+    else:
+        raise Exception(f"Path '{data_path}' is not a directory.")
+
+
+def load_master_transaction_df(
+    data_path: str,
+    validate: bool = False,
+) -> None:
+    """Updates the master jsonl with any csvs in the data_path
+
+    Args:
+        data_path (str): where your rocket money transaction export csvs are located.
+        validate (bool, optional): If true, tries to ensure the master df has the right columns etc. Defaults to False.
+    """
+
+    master_df_path = Path(data_path).joinpath(MASTER_DF_FILENAME)
+    if master_df_path.exists():
+        print(f"Loading master transaction data from: {master_df_path}")
+        df = pd.read_json(master_df_path, orient="records", lines=True)
+        # df["Date"] = pd.to_datetime(df["Date"])
+        if validate:
+            print("Applying validation checks and transformations...")
+            df = apply_transformations(df)
+        return df
+    else:
+        print("No master file detected. Make sure it is named {MASTER_DF_FILENAME}")
+        return None
+
+
+def update_master_transaction_df(
+    data_path: str, return_df: bool = True
+) -> pd.DataFrame:
+    """Adds new transactions to master transaction df.
+    Returns new df, saves to disk and creates backup of old df.
+
+    Args:
+        data_path (str): where your rocket money transaction export csvs are located.
+        return_df (bool): whether you want the new df returned. Defaults to True.
+    Returns:
+        pd.DataFrame: new master df with new transactions
+    """
+
+    df = load_master_transaction_df(data_path)
+    if not isinstance(df, pd.DataFrame):
+        df = pd.DataFrame()
+
+    # read through any transaction csvs in the data dir and add them to existing master transaction file
+    files = [
+        file
+        for file in Path(data_path).iterdir()
+        if file.is_file() and file.suffix == ".csv" and file.name != MASTER_DF_FILENAME
+    ]
+    if files:
+        print("CSV transaction files found in data dir.")
+        start_date = None
+        old_master_rows = 0
+        if not df.empty:
+            start_date = df["Date"].max() + timedelta(days=1)
+            old_master_rows = df.shape[0]
+            print(
+                f"Old master transaction data ends on {df["Date"].max()} and has num rows: {old_master_rows}"
+            )
+            master_backup_path = Path(data_path).joinpath(
+                f"backup_{MASTER_DF_FILENAME}"
+            )
+            print(f"Backing up master at: {master_backup_path}")
+            df.to_json(master_backup_path, orient="records", lines=True)
+        for file in files:
+            tmp_df = pd.read_csv(file)
+            tmp_df["Date"] = pd.to_datetime(tmp_df["Date"])
+            if start_date:
+                tmp_df = tmp_df[tmp_df["Date"] >= start_date]
+            df = pd.concat([df, tmp_df])
+    else:
+        print("No csv files found to update master df with...")
+        return None
+    print(f"Added {df.shape[0]-old_master_rows} new transactions to master.")
+    print("Applying validation checks and transformations...")
+    df = apply_transformations(df)
+    master_save_path = Path(data_path).joinpath(f"{MASTER_DF_FILENAME}")
+    print(f"Saving new master transaction df to: {master_save_path}")
+    df.to_json(master_save_path, orient="records", lines=True)
+    print(df.shape)
+
+    if return_df:
+        return df
+
+
+def apply_transformations(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds columns to the trasnaction dataframe that help with downstream analytics.
+
+    Args:
+        df (pd.DataFrame): input dataframe
+
+    Returns:
+        pd.DataFrame: enriched dataframe
+    """
+
+    df = apply_custom_cat(df)
+    df = apply_month(df)
+    df = apply_year(df)
+
+    return df
+
+
+def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds a column called CUSTOM_CAT to the transaction dataframe
+
+    Args:
+        df (pd.DataFrame): input transaction dataframe
+
+    Returns:
+        pd.DataFrame: Same df you input with 1 new column "CUSTOM_CAT"
+    """
+
+    df["CUSTOM_CAT"] = df["Category"].apply(lambda x: CAT_MAP.get(x, "UNKNOWN"))
+
+    return df
+
+
+def apply_month(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds a column called MONTH to the transaction dataframe
+
+    Args:
+        df (pd.DataFramae): input transaction dataframe
+
+    Returns:
+        pd.DataFrame: Same df you input with 1 new column "MONTH"
+    """
+
+    df["MONTH"] = df["Date"].apply(lambda x: x.strftime("%m"))
+
+    return df
+
+
+def apply_year(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds a column called YEAR to the transaction dataframe
+
+    Args:
+        df (pd.DataFramae): input transaction dataframe
+
+    Returns:
+        pd.DataFrame: Same df you input with 1 new column "YEAR"
+    """
+
+    df["YEAR"] = df["Date"].apply(lambda x: x.strftime("%y"))
+
+    return df
+
+
+def monthly_cost_table(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculates total category spend per month
+
+    Args:
+        df (pd.DataFrame): transaction df
+
+    Returns:
+        pd.Series: total category spend per month
+    """
+
+    return df.groupby(["MONTH", "YEAR", "CUSTOM_CAT"])["Amount"].sum().reset_index()
+
+
+def last_30_cat_spend(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculates spend across categories in last 30 days and delta from 30 days before that.
+
+    Args:
+        df (pd.DataFrame): transaction dataframe
+
+    Returns:
+        pd.DataFrame: calculated metrics
+    """
+    end_date = datetime.now()
+    start_date = datetime.now() - timedelta(days=30)
+    current_df = df[(df["Date"] >= start_date) & (df["Date"] <= end_date)]
+    end_date = start_date - timedelta(days=1)
+    start_date = end_date - timedelta(days=30)
+    past_df = df[(df["Date"] >= start_date) & (df["Date"] <= end_date)]
+
+    current_cat_spending = (
+        current_df.groupby("CUSTOM_CAT")["Amount"].sum().reset_index()
+    )
+    current_cat_spending = current_cat_spending.rename(
+        columns={"Amount": "Current Amount"}
+    )
+    past_cat_spending = past_df.groupby("CUSTOM_CAT")["Amount"].sum().reset_index()
+    past_cat_spending = past_cat_spending.rename(columns={"Amount": "Past Amount"})
+    combine_df = current_cat_spending.merge(past_cat_spending, how="outer")
+    combine_df = combine_df.fillna(0)
+    combine_df["Delta"] = combine_df["Current Amount"] - combine_df["Past Amount"]
+    combine_df["pct_delta"] = (
+        (combine_df["Current Amount"] / combine_df["Past Amount"]) - 1
+    ) * 100
+    # combine_df["pct_delta"] = combine_df["pct_delta"].apply(lambda x: f"{np.round(x)}%" if (isinstance(x, float) or isinstance(x, np.inf)) else x)
+    # combine_df["pct_delta"] = combine_df["pct_delta"].replace(np.inf, "inf%")
+    return combine_df
+
+
+def get_category_cost(
+    df: pd.DataFrame,
+    cat: str,
+    cat_col: str = "CUSTOM_CAT",
+    start_date: datetime = None,
+    end_date: datetime = None,
+    stat_type: str = "total",
+) -> float:
+    """Calculates useful statistics. For example, total spending on food last month.
+
+    Args:
+        df (pd.DataFrame): transactions dataframe to use.
+        cat (str): value of category of interest.
+        cat_col (str, optional): name of df col of interest. Defaults to "CUSTOM_CAT".
+        start_date (datetime.datetime, optional): start datetime for calculation. Defaults to no minimum.
+        end_date (datetime.datetime, optional): end datetime for calculation. Defaults to maximum.
+        stat_type (str, optional): metric to return. Choices are "total","average","median". Defaults to "total".
+
+    Returns:
+        float: calculated metric
+    """
+
+    df["Date"] = pd.to_datetime(df["Date"])
+
+    if start_date and isinstance(start_date, datetime):
+        df = df[df["Date"] >= start_date]
+    if end_date and isinstance(end_date, datetime):
+        df = df[df["Date"] <= end_date]
+
+    df = df[df[cat_col] == cat]
+
+    if stat_type == "total":
+        return df["Amount"].sum()
+    elif stat_type == "average":
+        return df["Amount"].mean()
+    elif stat_type == "median":
+        return df["Amount"].median()
+    else:
+        raise Exception(
+            f"stat_type must be either 'total', 'average', or 'median'. Not '{stat_type}'."
+        )
+
+
+def last_month():
+    pass
