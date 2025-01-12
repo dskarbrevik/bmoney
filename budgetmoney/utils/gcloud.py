@@ -5,7 +5,10 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
+from budgetmoney.utils.data import monthly_gsheets_cost_table
+
 from pathlib import Path
+import pandas as pd
 
 
 class GSheetsClient:
@@ -97,7 +100,7 @@ class GSheetsClient:
             .execute()
         )
 
-        print(f"{result.get('updatedCells')} cells updated.")
+        return f"{result.get('updatedCells')} cells updated."
 
     def append_data(self, sheet_range, values):
         body = {"values": values}
@@ -115,3 +118,36 @@ class GSheetsClient:
         )
 
         print(f"{result.get('updatedCells')} cells updated.")
+
+
+    def sync_sheet(self, df: pd.DataFrame, sheet_name: str) -> bool:
+        """Takes a transaction dataframe and gsheet range to ensure the sheet is up to date with the dataframe.
+
+        Args:
+            df (pd.DataFrame): transaction dataframe
+            sheet_name (str): name of the tab/sheet in your spreadsheet
+
+        Returns:
+            bool: whether the sync process succeeded
+        """        
+
+        try:
+            # get data for gsheets from master transaction
+            cat_df = monthly_gsheets_cost_table(df)
+
+            end_range = df.shape[1]
+            sheet_range = f"{sheet_name}!A:{chr(64+end_range)}"
+            old_data = self.read_data(sheet_range=sheet_range)
+            old_df = pd.DataFrame(old_data[1:],columns=old_data[0])
+
+            assert all(cat_df.columns==old_df.columns)
+
+            new_df = pd.concat([cat_df,old_df])
+
+            new_df = new_df.drop_duplicates()
+
+            values = [new_df.columns.tolist()] + new_df.values.tolist()
+            response = self.update_data(sheet_range=sheet_range,values=values)
+            return {"status":1, "message": response}
+        except Exception as e:
+            return {"status":0, "message": e}

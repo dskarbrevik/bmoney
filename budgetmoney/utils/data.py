@@ -5,6 +5,10 @@ from datetime import timedelta, datetime
 from budgetmoney.constants import CAT_MAP
 
 import pandas as pd
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def has_csv_files(data_path: str) -> bool:
@@ -178,7 +182,7 @@ def apply_year(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def monthly_cost_table(df: pd.DataFrame) -> pd.DataFrame:
+def monthly_gsheets_cost_table(df: pd.DataFrame) -> pd.DataFrame:
     """Calculates total category spend per month
 
     Args:
@@ -188,7 +192,19 @@ def monthly_cost_table(df: pd.DataFrame) -> pd.DataFrame:
         pd.Series: total category spend per month
     """
 
-    return df.groupby(["MONTH", "YEAR", "CUSTOM_CAT"])["Amount"].sum().reset_index()
+    cat_df = df.groupby(["MONTH", "YEAR", "CUSTOM_CAT"])["Amount"].sum().reset_index()
+
+    cat_df["Date"] = cat_df["MONTH"].astype(str)+"/"+cat_df["YEAR"].astype(str)
+
+    cat_df["Person"] = os.getenv('BUDGET_MONEY_USER',"UNKNOWN")
+
+    cat_df = cat_df.rename(columns={"CUSTOM_CAT":"Category"})
+
+    cat_df["dt"] = pd.to_datetime(cat_df["Date"],format='%m/%y')
+
+    cat_df = cat_df.sort_values(by=["dt"],ascending=False,ignore_index=True)
+
+    return cat_df[["Date","Person","Category","Amount"]]
 
 
 def last_30_cat_spend(df: pd.DataFrame) -> pd.DataFrame:
@@ -223,7 +239,7 @@ def last_30_cat_spend(df: pd.DataFrame) -> pd.DataFrame:
     ) * 100
     # combine_df["pct_delta"] = combine_df["pct_delta"].apply(lambda x: f"{np.round(x)}%" if (isinstance(x, float) or isinstance(x, np.inf)) else x)
     # combine_df["pct_delta"] = combine_df["pct_delta"].replace(np.inf, "inf%")
-    return combine_df
+    return combine_df, datetime.now() - timedelta(days=30), datetime.now()
 
 
 def get_category_cost(
@@ -267,7 +283,3 @@ def get_category_cost(
         raise Exception(
             f"stat_type must be either 'total', 'average', or 'median'. Not '{stat_type}'."
         )
-
-
-def last_month():
-    pass

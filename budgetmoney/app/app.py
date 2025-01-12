@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 import sys
 from pathlib import Path
-from budgetmoney.utils.data import monthly_cost_table, last_30_cat_spend
+from budgetmoney.utils.data import last_30_cat_spend
 from budgetmoney.utils.gcloud import GSheetsClient
 from budgetmoney.constants import MASTER_DF_FILENAME, SHARED_EXPENSES
-from datetime import datetime
+from datetime import datetime, timedelta
 import calendar
 
 from dotenv import load_dotenv
@@ -23,7 +23,6 @@ if not Path(df_path).exists():
 
 df = pd.read_json(df_path, orient="records", lines=True)
 
-category_spending = monthly_cost_table(df)
 
 df["Date"] = pd.to_datetime(df["Date"])
 now = datetime.now()
@@ -32,24 +31,26 @@ start_of_month = datetime(now.year, now.month, 1)
 last_day_of_month = calendar.monthrange(now.year, now.month)[1]
 end_of_month = datetime(now.year, now.month, last_day_of_month, 23, 59, 59)
 
-gsheet = GSheetsClient(
+gclient = GSheetsClient(
     sheet_id=os.getenv("SPREADSHEET_ID"),
     sa_cred_path=os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
 )
 
 st.set_page_config(
-    page_title="Budget Money \U0001f680", page_icon="\U0001f680", layout="wide"
+    page_title="Budget Money", page_icon="\U0001f680", layout="wide"
 )
 st.title("Budget Money 🚀")
-
+st.divider()
 username = os.getenv("BUDGET_MONEY_USER")
+st.header(f"Hi {username}! Happy {datetime.now().strftime('%A')} 😎")
 tab1, tab2 = st.tabs(["📈 Mission Control", "🗃 Data Editor"])
 
 with tab1:
-    st.header(f"Hi {username}! Happy {datetime.now().strftime('%A')} 😎")
     num_cols = len(SHARED_EXPENSES)
+    st.subheader(f"Last 30 days Dashboard ({datetime.now().strftime('%d/%m')} - {(datetime.now() - timedelta(days=30)).strftime('%d/%m')})")
     columns = st.columns(num_cols)
-    last_30_df = last_30_cat_spend(df)
+    last_30_df, start, end = last_30_cat_spend(df)
+
     col = 0
     for i, row in last_30_df.iterrows():
         if row["CUSTOM_CAT"] in SHARED_EXPENSES:
@@ -65,6 +66,16 @@ with tab1:
 
 with tab2:
     st.header("Data Editor")
+
+    if st.button("Sync data to gsheets"):
+        response = gclient.sync_sheet(df,
+                                  sheet_name=os.getenv('SPREADSHEET_TAB_NAME'))
+        if response["status"]==1:
+            st.toast(f"Sync successful!\n\n{response["message"]}", icon="👌")
+        else:
+            st.toast(f"Sync failed!\n\n{response["message"]}", icon="❌")
+
+
     today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     two_months_ago = datetime.combine(
         (datetime.now() - pd.DateOffset(months=2)), datetime.min.time()
