@@ -3,9 +3,12 @@ import pandas as pd
 import numpy as np
 import sys
 from pathlib import Path
-from budgetmoney.utils.data import last_30_cat_spend
+from budgetmoney.utils.data import last_30_cat_spend, update_master_transaction_df
 from budgetmoney.utils.gcloud import GSheetsClient
-from budgetmoney.constants import MASTER_DF_FILENAME, SHARED_EXPENSES
+from budgetmoney.constants import (MASTER_DF_FILENAME, 
+                                   SHARED_EXPENSES, 
+                                   CAT_MAP, 
+                                   DATA_VIEW_COLS)
 from datetime import datetime, timedelta
 import calendar
 
@@ -19,7 +22,13 @@ load_dotenv()
 data_path = sys.argv[-1]
 df_path = Path(data_path).joinpath(MASTER_DF_FILENAME).resolve().as_posix()
 if not Path(df_path).exists():
-    raise Exception(f"The transaction df path: '{df_path}' does not exist!")
+    if Path(data_path).exists():
+        df = update_master_transaction_df(data_path)
+        if not isinstance(df, pd.DataFrame):
+            raise FileNotFoundError("There may not be a master jsonl or rocket money csv export file in your data dir.")
+    else:
+        raise FileNotFoundError(f"The data path: '{data_path}' does not exist!")
+
 
 df = pd.read_json(df_path, orient="records", lines=True)
 
@@ -75,6 +84,11 @@ with tab2:
         else:
             st.toast(f"Sync failed!\n\n{response["message"]}", icon="❌")
 
+    if st.button("Merge transaction datasets"):
+        response = update_master_transaction_df(data_path,
+                                                return_df=False,
+                                                return_msg=True)
+
 
     today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     two_months_ago = datetime.combine(
@@ -91,8 +105,32 @@ with tab2:
 
     # Display DataFrame based on state
     if st.session_state.show_all:
-        st.data_editor(df)  # Show all rows
+        st.data_editor(df[DATA_VIEW_COLS],
+                       column_config={
+                           "CUSTOM_CAT": st.column_config.SelectboxColumn(
+                               "CUSTOM_CAT",
+                               options=list(set(CAT_MAP.values())),
+                               required=True
+                           ),
+                            "SHARED": st.column_config.SelectboxColumn(
+                                "SHARED",
+                                options=[True,False],
+                                required=True
+                            )
+                       })  # Show all rows
     else:
         st.data_editor(
-            df[df["Date"] >= two_months_ago]
+            df[df["Date"] >= two_months_ago][DATA_VIEW_COLS],
+            column_config={
+                           "CUSTOM_CAT": st.column_config.SelectboxColumn(
+                               "CUSTOM_CAT",
+                               options=list(set(CAT_MAP.values())),
+                               required=True
+                           ),
+                            "SHARED": st.column_config.SelectboxColumn(
+                                "SHARED",
+                                options=[True,False],
+                                required=True
+                            )
+                       }
         )  # Show a slice of the DataFrame

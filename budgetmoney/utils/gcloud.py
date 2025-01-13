@@ -6,6 +6,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 from budgetmoney.utils.data import monthly_gsheets_cost_table
+from budgetmoney.constants import SHARED_EXPENSES
 
 from pathlib import Path
 import pandas as pd
@@ -72,8 +73,16 @@ class GSheetsClient:
                 with open(user_cred_path, "w") as token:
                     token.write(self.creds.to_json())
 
+    def clear_data(self, sheet_range):
+        result = (
+            self.service.spreadsheets()
+            .values()
+            .clear(spreadsheetId=self.sheet_id, range=sheet_range)
+            .execute()
+        )
+        return result
+
     def read_data(self, sheet_range):
-        # Call the Sheets API
         result = (
             self.service.spreadsheets()
             .values()
@@ -120,7 +129,16 @@ class GSheetsClient:
         print(f"{result.get('updatedCells')} cells updated.")
 
 
-    def sync_sheet(self, df: pd.DataFrame, sheet_name: str) -> bool:
+    def clean_values(self,values):
+        for i,row in enumerate(values):
+            for j,val in enumerate(row):
+                if isinstance(val,str):
+                    val = val.replace("'","")
+                    values[i][j] = val
+
+        return values
+
+    def sync_sheet(self, df: pd.DataFrame, sheet_name: str) -> dict:
         """Takes a transaction dataframe and gsheet range to ensure the sheet is up to date with the dataframe.
 
         Args:
@@ -128,25 +146,28 @@ class GSheetsClient:
             sheet_name (str): name of the tab/sheet in your spreadsheet
 
         Returns:
-            bool: whether the sync process succeeded
+            dict: keys - "status","message"
         """        
 
         try:
             # get data for gsheets from master transaction
-            cat_df = monthly_gsheets_cost_table(df)
-
+            cat_df = monthly_gsheets_cost_table(df, only_shared=True)
             end_range = df.shape[1]
             sheet_range = f"{sheet_name}!A:{chr(64+end_range)}"
-            old_data = self.read_data(sheet_range=sheet_range)
-            old_df = pd.DataFrame(old_data[1:],columns=old_data[0])
-
-            assert all(cat_df.columns==old_df.columns)
-
-            new_df = pd.concat([cat_df,old_df])
-
-            new_df = new_df.drop_duplicates()
-
-            values = [new_df.columns.tolist()] + new_df.values.tolist()
+            values = [cat_df.columns.tolist()] + cat_df.values.tolist()
+            # old_data = self.read_data(sheet_range=sheet_range)
+            # if old_data:
+            #     old_df = pd.DataFrame(old_data[1:],columns=old_data[0])
+            #     assert all(cat_df.columns==old_df.columns)
+            #     if not old_df.empty:
+            #         old_df["Amount"] = old_df["Amount"].astype(float).round(2)
+            #         old_df = old_df[old_df["Category"].isin(SHARED_EXPENSES)]
+            #         new_df = pd.concat([cat_df,old_df])
+            #         new_df = new_df.drop_duplicates()
+            #         # new_df = new_df[new_df["Category"].isin(SHARED_EXPENSES)]
+            #         values = [new_df.columns.tolist()] + new_df.values.tolist()
+            self.clear_data(sheet_range=sheet_range)
+            values = self.clean_values(values)
             response = self.update_data(sheet_range=sheet_range,values=values)
             return {"status":1, "message": response}
         except Exception as e:

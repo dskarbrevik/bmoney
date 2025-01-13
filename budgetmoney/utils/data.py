@@ -2,9 +2,10 @@ from budgetmoney.constants import MASTER_DF_FILENAME
 
 from pathlib import Path
 from datetime import timedelta, datetime
-from budgetmoney.constants import CAT_MAP
+from budgetmoney.constants import CAT_MAP, SHARED_EXPENSES
 
 import pandas as pd
+import numpy as np
 import os
 from dotenv import load_dotenv
 
@@ -55,6 +56,8 @@ def load_master_transaction_df(
         if validate:
             print("Applying validation checks and transformations...")
             df = apply_transformations(df)
+            print(f"Saving validated dataframe to: '{master_df_path}'")
+            df.to_json(master_df_path, orient="records", lines=True)
         return df
     else:
         print("No master file detected. Make sure it is named {MASTER_DF_FILENAME}")
@@ -62,7 +65,7 @@ def load_master_transaction_df(
 
 
 def update_master_transaction_df(
-    data_path: str, return_df: bool = True
+    data_path: str, return_df: bool = True, return_msg: bool = False
 ) -> pd.DataFrame:
     """Adds new transactions to master transaction df.
     Returns new df, saves to disk and creates backup of old df.
@@ -70,6 +73,7 @@ def update_master_transaction_df(
     Args:
         data_path (str): where your rocket money transaction export csvs are located.
         return_df (bool): whether you want the new df returned. Defaults to True.
+        return_msg (bool): whether you want a str status message returned. Defaults to False.
     Returns:
         pd.DataFrame: new master df with new transactions
     """
@@ -107,6 +111,8 @@ def update_master_transaction_df(
             df = pd.concat([df, tmp_df])
     else:
         print("No csv files found to update master df with...")
+        if return_msg:
+            return "No csv files found to update master df with..."
         return None
     print(f"Added {df.shape[0]-old_master_rows} new transactions to master.")
     print("Applying validation checks and transformations...")
@@ -118,6 +124,8 @@ def update_master_transaction_df(
 
     if return_df:
         return df
+    if return_msg:
+        return f"Transaction df updated, new df shape: {df.shape}"
 
 
 def apply_transformations(df: pd.DataFrame) -> pd.DataFrame:
@@ -133,9 +141,24 @@ def apply_transformations(df: pd.DataFrame) -> pd.DataFrame:
     df = apply_custom_cat(df)
     df = apply_month(df)
     df = apply_year(df)
+    df = apply_amount_float(df)
+    df = apply_shared(df)
 
     return df
 
+def apply_amount_float(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds a column called CUSTOM_CAT to the transaction dataframe
+
+    Args:
+        df (pd.DataFrame): input transaction dataframe
+
+    Returns:
+        pd.DataFrame: Same df you input with "Amount" col type cast to float and rounded to two decimal places.
+    """
+
+    df["Amount"] = df["Amount"].astype(float).round(2)
+
+    return df 
 
 def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
     """Adds a column called CUSTOM_CAT to the transaction dataframe
@@ -149,6 +172,24 @@ def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
 
     df["CUSTOM_CAT"] = df["Category"].apply(lambda x: CAT_MAP.get(x, "UNKNOWN"))
 
+    return df
+
+def apply_shared(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds a column called SHARED to the transaction dataframe
+
+    Args:
+        df (pd.DataFrame): input transaction dataframe
+
+    Returns:
+        pd.DataFrame: Same df you input with 1 new column "SHARED"
+    """
+    if "SHARED" in df.columns:
+        df["SHARED"] = np.where(df["SHARED"].isnull(),
+                                np.where(df["CUSTOM_CAT"].isin(SHARED_EXPENSES),True,False),
+                                df["SHARED"])
+
+    else:
+        df["SHARED"] = np.where(df["CUSTOM_CAT"].isin(SHARED_EXPENSES),True,False)
     return df
 
 
@@ -182,11 +223,13 @@ def apply_year(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def monthly_gsheets_cost_table(df: pd.DataFrame) -> pd.DataFrame:
+def monthly_gsheets_cost_table(df: pd.DataFrame,
+                               only_shared: bool = False) -> pd.DataFrame:
     """Calculates total category spend per month
 
     Args:
         df (pd.DataFrame): transaction df
+        only_shared (bool): If True, only return Categories in SHARED_EXPENSES. Defaults to False.
 
     Returns:
         pd.Series: total category spend per month
@@ -199,6 +242,9 @@ def monthly_gsheets_cost_table(df: pd.DataFrame) -> pd.DataFrame:
     cat_df["Person"] = os.getenv('BUDGET_MONEY_USER',"UNKNOWN")
 
     cat_df = cat_df.rename(columns={"CUSTOM_CAT":"Category"})
+
+    if only_shared:
+        cat_df = cat_df[cat_df["Category"].isin(SHARED_EXPENSES)]
 
     cat_df["dt"] = pd.to_datetime(cat_df["Date"],format='%m/%y')
 
