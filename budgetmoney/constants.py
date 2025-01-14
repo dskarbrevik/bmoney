@@ -30,21 +30,20 @@ CAT_MAP = {
     "Education": "UNKNOWN",
     "Charitable Donations": "UNKNOWN",
     "Cash & Checks": "UNKNOWN",
-    "Business": "UNKNOWN"
+    "Business": "UNKNOWN",
 }
 
-SHARED_EXPENSES = ["FOOD", 
-                   "SERVICES", 
-                   "TRAVEL", 
-                   "CAR",
-                   "PET"]
+SHARED_EXPENSES = ["FOOD", "SERVICES", "TRAVEL", "CAR", "PET"]
 
-DATA_VIEW_COLS = ["Original Date",
-                  "Account Name", 
-                  "Institution Name", 
-                  "Name",
-                  "Amount",
-                  "Category",
-                  "Note",
-                  "CUSTOM_CAT",
-                  "SHARED"]
+DATA_VIEW_COLS = [
+    "Date",
+    "Original Date",
+    "Account Name",
+    "Institution Name",
+    "Name",
+    "Amount",
+    "Category",
+    "Note",
+    "CUSTOM_CAT",
+    "SHARED",
+]

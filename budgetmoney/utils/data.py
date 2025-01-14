@@ -146,6 +146,7 @@ def apply_transformations(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
 def apply_amount_float(df: pd.DataFrame) -> pd.DataFrame:
     """Adds a column called CUSTOM_CAT to the transaction dataframe
 
@@ -158,7 +159,8 @@ def apply_amount_float(df: pd.DataFrame) -> pd.DataFrame:
 
     df["Amount"] = df["Amount"].astype(float).round(2)
 
-    return df 
+    return df
+
 
 def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
     """Adds a column called CUSTOM_CAT to the transaction dataframe
@@ -174,6 +176,7 @@ def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
 def apply_shared(df: pd.DataFrame) -> pd.DataFrame:
     """Adds a column called SHARED to the transaction dataframe
 
@@ -184,12 +187,14 @@ def apply_shared(df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: Same df you input with 1 new column "SHARED"
     """
     if "SHARED" in df.columns:
-        df["SHARED"] = np.where(df["SHARED"].isnull(),
-                                np.where(df["CUSTOM_CAT"].isin(SHARED_EXPENSES),True,False),
-                                df["SHARED"])
+        df["SHARED"] = np.where(
+            df["SHARED"].isnull(),
+            np.where(df["CUSTOM_CAT"].isin(SHARED_EXPENSES), True, False),
+            df["SHARED"],
+        )
 
     else:
-        df["SHARED"] = np.where(df["CUSTOM_CAT"].isin(SHARED_EXPENSES),True,False)
+        df["SHARED"] = np.where(df["CUSTOM_CAT"].isin(SHARED_EXPENSES), True, False)
     return df
 
 
@@ -223,34 +228,46 @@ def apply_year(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def monthly_gsheets_cost_table(df: pd.DataFrame,
-                               only_shared: bool = False) -> pd.DataFrame:
+def monthly_gsheets_cost_table(
+    df: pd.DataFrame, only_shared: bool = False, return_values: bool = False
+) -> pd.DataFrame:
     """Calculates total category spend per month
 
     Args:
         df (pd.DataFrame): transaction df
         only_shared (bool): If True, only return Categories in SHARED_EXPENSES. Defaults to False.
+        return_values (bool): If True, returns data as list of lists instead of as dataframe. Defaults to False.
 
     Returns:
         pd.Series: total category spend per month
     """
-
-    cat_df = df.groupby(["MONTH", "YEAR", "CUSTOM_CAT"])["Amount"].sum().reset_index()
-
-    cat_df["Date"] = cat_df["MONTH"].astype(str)+"/"+cat_df["YEAR"].astype(str)
-
-    cat_df["Person"] = os.getenv('BUDGET_MONEY_USER',"UNKNOWN")
-
-    cat_df = cat_df.rename(columns={"CUSTOM_CAT":"Category"})
-
+    if only_shared:
+        df = df[df["SHARED"] == True]
+    cat_df = (
+        df.groupby(["MONTH", "YEAR", "CUSTOM_CAT", "SHARED"])["Amount"]
+        .sum()
+        .reset_index()
+    )
+    cat_df["Date"] = cat_df["MONTH"].astype(str) + "/" + cat_df["YEAR"].astype(str)
+    cat_df["Person"] = os.getenv("BUDGET_MONEY_USER", "UNKNOWN")
+    cat_df = cat_df.rename(columns={"CUSTOM_CAT": "Category"})
     if only_shared:
         cat_df = cat_df[cat_df["Category"].isin(SHARED_EXPENSES)]
-
-    cat_df["dt"] = pd.to_datetime(cat_df["Date"],format='%m/%y')
-
-    cat_df = cat_df.sort_values(by=["dt"],ascending=False,ignore_index=True)
-
-    return cat_df[["Date","Person","Category","Amount"]]
+    cat_df = cat_df[["Date", "Person", "Category", "Amount"]]
+    cat_df["dt"] = pd.to_datetime(cat_df["Date"], format="%m/%y")
+    cat_df = cat_df.sort_values(by=["dt"], ascending=False, ignore_index=True)
+    cat_df = cat_df.drop(columns="dt")
+    cat_df["Amount"] = cat_df["Amount"].apply(np.round, args=(2,))
+    pivot_df = pd.pivot_table(
+        cat_df, index=["Date", "Person"], columns="Category", values="Amount"
+    ).reset_index()
+    # pivot_df = pivot_df.apply(round,axis=1)
+    pivot_df = pivot_df.fillna(0)
+    pivot_df.columns.name = None
+    if return_values:
+        pivot_df = [pivot_df.columns.tolist()] + pivot_df.values.tolist()
+        pivot_df = clean_values(pivot_df)
+    return pivot_df
 
 
 def last_30_cat_spend(df: pd.DataFrame) -> pd.DataFrame:
@@ -329,3 +346,13 @@ def get_category_cost(
         raise Exception(
             f"stat_type must be either 'total', 'average', or 'median'. Not '{stat_type}'."
         )
+
+
+def clean_values(values):
+    for i, row in enumerate(values):
+        for j, val in enumerate(row):
+            if isinstance(val, str):
+                val = val.replace("'", "")
+                values[i][j] = val
+
+    return values

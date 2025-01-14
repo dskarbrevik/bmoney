@@ -126,17 +126,7 @@ class GSheetsClient:
             .execute()
         )
 
-        print(f"{result.get('updatedCells')} cells updated.")
-
-
-    def clean_values(self,values):
-        for i,row in enumerate(values):
-            for j,val in enumerate(row):
-                if isinstance(val,str):
-                    val = val.replace("'","")
-                    values[i][j] = val
-
-        return values
+        return f"{result.get('updatedCells')} cells updated."
 
     def sync_sheet(self, df: pd.DataFrame, sheet_name: str) -> dict:
         """Takes a transaction dataframe and gsheet range to ensure the sheet is up to date with the dataframe.
@@ -147,14 +137,18 @@ class GSheetsClient:
 
         Returns:
             dict: keys - "status","message"
-        """        
+        """
 
         try:
             # get data for gsheets from master transaction
-            cat_df = monthly_gsheets_cost_table(df, only_shared=True)
+            values = monthly_gsheets_cost_table(
+                df, only_shared=True, return_values=True
+            )
             end_range = df.shape[1]
             sheet_range = f"{sheet_name}!A:{chr(64+end_range)}"
-            values = [cat_df.columns.tolist()] + cat_df.values.tolist()
+
+            # ATTEMPT AT MERGING DATA INSTEAD OF REPLACING AS IS CURRENT APPROACH
+            # BUT RESULTS IN WEIRD DUPLICATE ROW BEHAVIORS IN SPREADSHEET
             # old_data = self.read_data(sheet_range=sheet_range)
             # if old_data:
             #     old_df = pd.DataFrame(old_data[1:],columns=old_data[0])
@@ -166,9 +160,9 @@ class GSheetsClient:
             #         new_df = new_df.drop_duplicates()
             #         # new_df = new_df[new_df["Category"].isin(SHARED_EXPENSES)]
             #         values = [new_df.columns.tolist()] + new_df.values.tolist()
+
             self.clear_data(sheet_range=sheet_range)
-            values = self.clean_values(values)
-            response = self.update_data(sheet_range=sheet_range,values=values)
-            return {"status":1, "message": response}
+            response = self.update_data(sheet_range=sheet_range, values=values)
+            return {"status": 1, "message": response}
         except Exception as e:
-            return {"status":0, "message": e}
+            return {"status": 0, "message": e}
