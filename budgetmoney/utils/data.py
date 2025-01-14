@@ -2,7 +2,7 @@ from budgetmoney.constants import MASTER_DF_FILENAME
 
 from pathlib import Path
 from datetime import timedelta, datetime
-from budgetmoney.constants import CAT_MAP, SHARED_EXPENSES
+from budgetmoney.constants import CAT_MAP, SHARED_EXPENSES, SHARED_NOTE_MSG
 
 import pandas as pd
 import numpy as np
@@ -54,6 +54,11 @@ def load_master_transaction_df(
         df = pd.read_json(master_df_path, orient="records", lines=True)
         # df["Date"] = pd.to_datetime(df["Date"])
         if validate:
+            master_backup_path = Path(data_path).joinpath(
+                f"backup_{MASTER_DF_FILENAME}"
+            )
+            print(f"Backing up master at: {master_backup_path}")
+            df.to_json(master_backup_path, orient="records", lines=True)
             print("Applying validation checks and transformations...")
             df = apply_transformations(df)
             print(f"Saving validated dataframe to: '{master_df_path}'")
@@ -62,7 +67,6 @@ def load_master_transaction_df(
     else:
         print("No master file detected. Make sure it is named {MASTER_DF_FILENAME}")
         return None
-
 
 def update_master_transaction_df(
     data_path: str, return_df: bool = True, return_msg: bool = False
@@ -110,7 +114,6 @@ def update_master_transaction_df(
                 tmp_df = tmp_df[tmp_df["Date"] >= start_date]
             df = pd.concat([df, tmp_df])
     else:
-        print("No csv files found to update master df with...")
         if return_msg:
             return "No csv files found to update master df with..."
         return None
@@ -143,6 +146,26 @@ def apply_transformations(df: pd.DataFrame) -> pd.DataFrame:
     df = apply_year(df)
     df = apply_amount_float(df)
     df = apply_shared(df)
+    df = apply_latest(df)
+    df = apply_note_check(df)
+
+    return df
+
+
+def apply_note_check(df: pd.DataFrame) -> pd.DataFrame:
+    """Makes sure that if SHARED_NOTE_MSG in Note then SHARED is True
+
+    Args:
+        df (pd.DataFrame): input transaction dataframe
+
+    Returns:
+        pd.DataFrame: Same df you input with SHARED set to True where Note=SHARED_NOTE_MSG
+    """
+
+    df.loc[df["Note"].isnull(),"Note"] = ""
+    df.loc[df["Note"].isin(["nan","None"]),"Note"] = ""
+
+    df.loc[df["Note"].str.lower().str.strip()==SHARED_NOTE_MSG,"SHARED"] = True
 
     return df
 
@@ -196,6 +219,19 @@ def apply_shared(df: pd.DataFrame) -> pd.DataFrame:
     else:
         df["SHARED"] = np.where(df["CUSTOM_CAT"].isin(SHARED_EXPENSES), True, False)
     return df
+
+def apply_latest(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds a column called LATEST_UPDATE to the transaction dataframe representing the last time you update that row
+
+    Args:
+        df (pd.DataFrame): input transaction dataframe
+
+    Returns:
+        pd.DataFrame: Same df you input with 1 new column "LATEST_UPDATE"
+    """
+    if "LATEST_UPDATE" not in df.columns:
+        df["LATEST_UPDATE"] = None
+    return df   
 
 
 def apply_month(df: pd.DataFrame) -> pd.DataFrame:
