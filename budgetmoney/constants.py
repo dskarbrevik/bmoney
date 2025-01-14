@@ -2,8 +2,13 @@
 Constants used by other functions.
 """
 
+# the name of the file containing your running transactions. Essentially your database. 
+# Over time you may have new rocket money export csvs but this file persists forever.
 MASTER_DF_FILENAME = "BUDGET_MONEY_TRANSACTIONS.jsonl"
 
+
+# Maps Rocket Money categories to your own custom categories
+# Here I'm using a mapping that results in fewer more high level categories to make budgeting easier
 CAT_MAP = {
     "Groceries": "FOOD",
     "Auto & Transport": "CAR",
@@ -33,17 +38,23 @@ CAT_MAP = {
     "Business": "UNKNOWN",
 }
 
+# decides which CUSTOM_CAT values should have SHARED set to True
 SHARED_EXPENSES = ["FOOD", "SERVICES", "TRAVEL", "CAR", "PET"]
 
+
+# decides which columns and general order to show in app's data viewer
 DATA_VIEW_COLS = [
     "Date",
     "Original Date",
-    "Account Name",
-    "Institution Name",
     "Name",
     "Amount",
     "Category",
-    "Note",
     "CUSTOM_CAT",
     "SHARED",
+    "Note",
+    "Institution Name",
+    "Account Name"
 ]
+
+# if Note col equals this msg, SHARED will be set to True
+SHARED_NOTE_MSG = "shared"
