@@ -18,7 +18,7 @@ CAT_MAP = {
     "Shopping": "OTHER",
     "Income": "INCOME",
     "Bills & Utilities": "OTHER",
-    "Entertainment & Rec.": "SERVICES",
+    "Entertainment & Rec.": "ENTERTAINMENT",
     "Internal Transfers": "BANK TRANS",
     "Pets": "PET",
     "Investment": "BANK TRANS",
@@ -27,19 +27,26 @@ CAT_MAP = {
     "Health & Wellness": "OTHER",
     "Personal Care": "OTHER",
     "Loan Payment": "OTHER",
-    "Medical": "UNKNOWN",
-    "Home & Garden": "UNKNOWN",
-    "Gifts": "UNKNOWN",
-    "Fees": "UNKNOWN",
-    "Family Care": "UNKNOWN",
-    "Education": "UNKNOWN",
-    "Charitable Donations": "UNKNOWN",
-    "Cash & Checks": "UNKNOWN",
-    "Business": "UNKNOWN",
+    "Medical": "OTHER",
+    "Home & Garden": "HOUSEHOLD",
+    "Gifts": "OTHER",
+    "Fees": "OTHER",
+    "Family Care": "OTHER",
+    "Education": "OTHER",
+    "Charitable Donations": "OTHER",
+    "Cash & Checks": "OTHER",
+    "Business": "OTHER",
 }
 
 # decides which CUSTOM_CAT values should have SHARED set to True
-SHARED_EXPENSES = ["FOOD", "SERVICES", "TRAVEL", "CAR", "PET"]
+SHARED_EXPENSES = ["FOOD", 
+                   "SERVICES", 
+                   "TRAVEL", 
+                   "CAR", 
+                   "PET", 
+                   "RENT",
+                   "ENTERTAINMENT",
+                   "HOUSEHOLD"]
 
 
 # decides which columns and general order to show in app's data viewer

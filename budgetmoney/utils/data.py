@@ -300,6 +300,9 @@ def monthly_gsheets_cost_table(
     # pivot_df = pivot_df.apply(round,axis=1)
     pivot_df = pivot_df.fillna(0)
     pivot_df.columns.name = None
+    for cat in SHARED_EXPENSES:
+        if cat not in pivot_df.columns:
+            pivot_df[cat] = 0
     if return_values:
         pivot_df = [pivot_df.columns.tolist()] + pivot_df.values.tolist()
         pivot_df = clean_values(pivot_df)
