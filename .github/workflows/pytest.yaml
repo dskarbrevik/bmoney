@@ -26,8 +26,8 @@ jobs:
         
     - name: Test with pytest
       run: |
-        pytest
+        uv run pytest
     
     - name: Run coverage test
       run: |
-        pytest --cov
+        uv run pytest --cov
