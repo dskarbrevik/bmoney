@@ -6,7 +6,6 @@ from budgetmoney.constants import (
     CAT_MAP,
     SHARED_EXPENSES,
     SHARED_NOTE_MSG,
-    DATA_VIEW_COLS,
 )
 
 import pandas as pd
