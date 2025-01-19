@@ -10,20 +10,20 @@ dependencies = [
     "google-auth>=2.37.0",
     "google-auth-httplib2>=0.2.0",
     "google-auth-oauthlib>=1.2.1",
-    "ipykernel>=6.29.5",
-    "jupyterlab>=4.3.4",
-    "langchain>=0.3.14",
-    "langchain-huggingface>=0.1.2",
-    "langchain-ollama>=0.2.2",
     "matplotlib>=3.10.0",
     "pandas>=2.2.3",
     "plotly>=5.24.1",
     "pydantic>=2.10.4",
     "python-dotenv>=1.0.1",
-    "ruff>=0.8.6",
     "streamlit>=1.41.1",
-    "transformers>=4.47.1",
     "typer>=0.15.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.6",
+    "ipykernel>=6.29.5",
+    "jupyterlab>=4.3.4",
 ]
 
 [build-system]
@@ -35,3 +35,4 @@ bmoney = "budgetmoney.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["budgetmoney"]
+

@@ -59,7 +59,7 @@ def sync(data_dir: str):
     if response["status"] == 1:
         print("Successfully synced gsheet!")
     else:
-        print(f"Sync Error!\n{response["message"]}")
+        print(f"Sync Error!\n{response['message']}")
 
 
 if __name__ == "__main__":

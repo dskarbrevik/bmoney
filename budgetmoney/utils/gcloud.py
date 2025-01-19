@@ -6,7 +6,6 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 from budgetmoney.utils.data import monthly_gsheets_cost_table
-from budgetmoney.constants import SHARED_EXPENSES
 
 from pathlib import Path
 import pandas as pd
@@ -145,7 +144,7 @@ class GSheetsClient:
                 df, only_shared=True, return_values=True
             )
             end_range = df.shape[1]
-            sheet_range = f"{sheet_name}!A:{chr(64+end_range)}"
+            sheet_range = f"{sheet_name}!A:{chr(64 + end_range)}"
 
             # ATTEMPT AT MERGING DATA INSTEAD OF REPLACING AS IS CURRENT APPROACH
             # BUT RESULTS IN WEIRD DUPLICATE ROW BEHAVIORS IN SPREADSHEET
