@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, mock_open
 import pandas as pd
 from pathlib import Path
 from budgetmoney.utils.data import load_master_transaction_df
