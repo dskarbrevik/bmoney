@@ -35,3 +35,7 @@ bmoney = "budgetmoney.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["budgetmoney"]
+
+[tool.ruff]
+# Include YAML files for linting and formatting.
+include = ["*.yaml", "*.yml"]

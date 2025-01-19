@@ -1,0 +1,49 @@
+name: Ruff Lint and Auto-Fix
+
+on:
+    pull_request:
+      types: [opened, synchronize, reopened]
+
+jobs:
+  ruff-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with: 
+          python-version: 3.12  # Use the Python version your project requires.
+
+      - name: Install Ruff
+        uses: astral-sh/ruff-action@v3
+
+      - name: Run Ruff check
+        run: ruff check .
+
+      - name: Run Ruff Auto-fix
+        run: |
+            ruff check --fix .
+            if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "Apply Ruff fixes"
+            git push
+            fi
+
+        # Step 6: Run Ruff format and commit changes
+      - name: Run Ruff Format
+        run: |
+            ruff format .
+            if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "Apply Ruff formatting"
+            git push
+            fi

@@ -2,7 +2,7 @@
 Constants used by other functions.
 """
 
-# the name of the file containing your running transactions. Essentially your database. 
+# the name of the file containing your running transactions. Essentially your database.
 # Over time you may have new rocket money export csvs but this file persists forever.
 MASTER_DF_FILENAME = "BUDGET_MONEY_TRANSACTIONS.jsonl"
 
@@ -39,14 +39,16 @@ CAT_MAP = {
 }
 
 # decides which CUSTOM_CAT values should have SHARED set to True
-SHARED_EXPENSES = ["FOOD", 
-                   "SERVICES", 
-                   "TRAVEL", 
-                   "CAR", 
-                   "PET", 
-                   "RENT",
-                   "ENTERTAINMENT",
-                   "HOUSEHOLD"]
+SHARED_EXPENSES = [
+    "FOOD",
+    "SERVICES",
+    "TRAVEL",
+    "CAR",
+    "PET",
+    "RENT",
+    "ENTERTAINMENT",
+    "HOUSEHOLD",
+]
 
 
 # decides which columns and general order to show in app's data viewer
@@ -60,7 +62,7 @@ DATA_VIEW_COLS = [
     "SHARED",
     "Note",
     "Institution Name",
-    "Account Name"
+    "Account Name",
 ]
 
 # if Note col equals this msg, SHARED will be set to True
