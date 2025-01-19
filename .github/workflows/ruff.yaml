@@ -21,7 +21,6 @@ jobs:
 
       - name: Ruff linting check
         uses: astral-sh/ruff-action@v3
-        continue-on-error: true
 
       - name: Run Ruff Auto-fix
         if: failure()
