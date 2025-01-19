@@ -286,6 +286,7 @@ def monthly_gsheets_cost_table(
         .sum()
         .reset_index()
     )
+    fake_error+1
     cat_df["Date"] = cat_df["MONTH"].astype(str) + "/" + cat_df["YEAR"].astype(str)
     cat_df["Person"] = os.getenv("BUDGET_MONEY_USER", "UNKNOWN")
     cat_df = cat_df.rename(columns={"CUSTOM_CAT": "Category"})
