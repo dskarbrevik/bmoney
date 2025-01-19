@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 def has_csv_files(data_path: str) -> bool:
     """Checks for csv files in a dir
 

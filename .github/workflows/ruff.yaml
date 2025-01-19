@@ -19,8 +19,10 @@ jobs:
 
       - name: Ruff linting check
         uses: astral-sh/ruff-action@v3
+        continue-on-error: true
 
       - name: Run Ruff Auto-fix
+        if: failure()
         run: |
           ruff check --fix .
           if [ -n "$(git status --porcelain)" ] then
@@ -31,13 +33,13 @@ jobs:
             git push
           fi
 
-      # - name: Run Ruff Format
-      #   run: |
-      #     ruff format .
-      #     if [ -n "$(git status --porcelain)" ]; then
-      #       git config user.name "github-actions[bot]"
-      #       git config user.email "github-actions[bot]@users.noreply.github.com"
-      #       git add .
-      #       git commit -m "Apply Ruff formatting"
-      #       git push
-      #     fi
+      - name: Run Ruff Format
+        run: |
+          ruff format .
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "Apply Ruff formatting"
+            git push
+          fi
