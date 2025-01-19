@@ -28,7 +28,7 @@ jobs:
           PR_BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
         run: |
           ruff check --fix .
-          if [ -n "$(git status --porcelain)" ] then
+          if [ -n "$(git status --porcelain)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add .
