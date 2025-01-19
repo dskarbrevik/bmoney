@@ -26,7 +26,7 @@ jobs:
       - name: Run Ruff Auto-fix
         if: failure()
         env:
-          BRANCH_NAME: ${{ github.ref_name }} # Extracts the branch name
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
           ruff check --fix .
           if [ -n "$(git status --porcelain)" ] then
@@ -34,12 +34,12 @@ jobs:
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add .
             git commit -m "Apply Ruff fixes"
-            git push origin HEAD:${BRANCH_NAME}
+            git push origin HEAD:refs/heads/${BRANCH_NAME}
           fi
 
       - name: Run Ruff Format
         env:
-          BRANCH_NAME: ${{ github.ref_name }} # Extracts the branch name
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
           ruff format .
           if [ -n "$(git status --porcelain)" ]; then
@@ -47,5 +47,5 @@ jobs:
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add .
             git commit -m "Apply Ruff formatting"
-            git push origin HEAD:${BRANCH_NAME}
+            git push origin HEAD:refs/heads/${BRANCH_NAME}
           fi
