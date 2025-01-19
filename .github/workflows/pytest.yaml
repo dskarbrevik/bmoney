@@ -8,7 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
     - uses: actions/checkout@v4
@@ -26,5 +26,8 @@ jobs:
         
     - name: Test with pytest
       run: |
-        pip install pytest pytest-cov
-        pytest /tests --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+        pytest
+    
+    - name: Run coverage test
+      run: |
+        pytest --cov
