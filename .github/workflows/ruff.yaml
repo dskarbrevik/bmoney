@@ -1,5 +1,4 @@
 name: Ruff Lint and Auto-Fix
-
 on:
     pull_request:
       types: [opened, synchronize, reopened]
@@ -7,7 +6,6 @@ on:
 jobs:
   ruff-check:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,25 +23,24 @@ jobs:
       - name: Run Ruff check
         run: ruff check .
 
-      - name: Run Ruff Auto-fix
-        run: |
-            ruff check --fix .
-            if [ -n "$(git status --porcelain)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add .
-            git commit -m "Apply Ruff fixes"
-            git push
-            fi
+      # - name: Run Ruff Auto-fix
+      #   run: |
+      #     ruff check --fix .
+      #     if [ -n "$(git status --porcelain)" ] then
+      #       git config user.name "github-actions[bot]"
+      #       git config user.email "github-actions[bot]@users.noreply.github.com"
+      #       git add .
+      #       git commit -m "Apply Ruff fixes"
+      #       git push
+      #     fi
 
-        # Step 6: Run Ruff format and commit changes
-      - name: Run Ruff Format
-        run: |
-            ruff format .
-            if [ -n "$(git status --porcelain)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add .
-            git commit -m "Apply Ruff formatting"
-            git push
-            fi
+      # - name: Run Ruff Format
+      #   run: |
+      #     ruff format .
+      #     if [ -n "$(git status --porcelain)" ]; then
+      #       git config user.name "github-actions[bot]"
+      #       git config user.email "github-actions[bot]@users.noreply.github.com"
+      #       git add .
+      #       git commit -m "Apply Ruff formatting"
+      #       git push
+      #     fi
