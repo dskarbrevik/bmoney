@@ -1,5 +1,6 @@
 import pytest
-from budgetmoney.utils.data import has_csv_files  
+from budgetmoney.utils.data import has_csv_files
+
 
 def test_has_csv_files_with_csv_files(tmp_path):
     # Create some CSV files in the temporary directory
@@ -7,8 +8,9 @@ def test_has_csv_files_with_csv_files(tmp_path):
     csv_file.touch()
     another_csv_file = tmp_path / "test2.csv"
     another_csv_file.touch()
-    
+
     assert has_csv_files(tmp_path) is True
+
 
 def test_has_csv_files_without_csv_files(tmp_path):
     # Create some non-CSV files in the temporary directory
@@ -16,12 +18,14 @@ def test_has_csv_files_without_csv_files(tmp_path):
     txt_file.touch()
     another_file = tmp_path / "test2.docx"
     another_file.touch()
-    
+
     assert has_csv_files(tmp_path) is False
+
 
 def test_has_csv_files_with_empty_directory(tmp_path):
     # Test an empty directory
     assert has_csv_files(tmp_path) is False
+
 
 def test_has_csv_files_invalid_path():
     # Test with an invalid path
