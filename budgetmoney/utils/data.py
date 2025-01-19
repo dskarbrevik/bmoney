@@ -2,10 +2,7 @@ from budgetmoney.constants import MASTER_DF_FILENAME
 
 from pathlib import Path
 from datetime import timedelta, datetime
-from budgetmoney.constants import (
-    CAT_MAP,
-    SHARED_EXPENSES,SHARED_NOTE_MSG
-)
+from budgetmoney.constants import CAT_MAP, SHARED_EXPENSES, SHARED_NOTE_MSG
 
 import pandas as pd
 import numpy as np
