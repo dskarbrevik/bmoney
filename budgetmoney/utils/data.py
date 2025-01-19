@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import timedelta, datetime
 from budgetmoney.constants import (
     CAT_MAP,
-    SHARED_EXPENSES,SHARED_NOTE_MSG,DATA_VIEW_COLS
+    SHARED_EXPENSES,SHARED_NOTE_MSG
 )
 
 import pandas as pd
