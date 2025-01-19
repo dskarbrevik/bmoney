@@ -3,7 +3,7 @@ name = "budgetmoney"
 version = "0.1.0"
 description = "A Rocket Money transaction analyzer tool"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10, <3.14"
 dependencies = [
     "google-api-core>=2.24.0",
     "google-api-python-client>=2.158.0",
