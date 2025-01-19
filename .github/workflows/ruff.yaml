@@ -20,10 +20,12 @@ jobs:
           python-version: 3.12  # Use the Python version your project requires.
 
       - name: Ruff linting check
+        id: ruff_check
         uses: astral-sh/ruff-action@v3
+        continue-on-error: true
 
       - name: Run Ruff Auto-fix
-        if: failure()
+        if: steps.ruff_check.outcome == 'failure'
         env:
           PR_BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
         run: |
