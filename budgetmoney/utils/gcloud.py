@@ -144,7 +144,7 @@ class GSheetsClient:
                 df, only_shared=True, return_values=True
             )
             end_range = df.shape[1]
-            sheet_range = f"{sheet_name}!A:{chr(64+end_range)}"
+            sheet_range = f"{sheet_name}!A:{chr(64 + end_range)}"
 
             # ATTEMPT AT MERGING DATA INSTEAD OF REPLACING AS IS CURRENT APPROACH
             # BUT RESULTS IN WEIRD DUPLICATE ROW BEHAVIORS IN SPREADSHEET

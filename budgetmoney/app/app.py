@@ -155,7 +155,7 @@ with tab1:
                 st.metric(
                     label=row["CUSTOM_CAT"],
                     value=round(row["Current Amount"], 2),
-                    delta=f"{np.round(row["pct_delta"])}%",
+                    delta=f"{np.round(row['pct_delta'])}%",
                     delta_color="inverse",
                     border=True,
                 )
@@ -178,7 +178,7 @@ with tab2:
         if response["status"] == 1:
             st.toast("Sync successful!", icon="👌")
         else:
-            st.toast(f"Sync failed!\n\n{response["message"]}", icon="❌")
+            st.toast(f"Sync failed!\n\n{response['message']}", icon="❌")
     st.divider()
 
     col1, col2, col3 = st.columns([0.15, 0.15, 0.7])

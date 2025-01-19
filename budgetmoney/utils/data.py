@@ -2,7 +2,12 @@ from budgetmoney.constants import MASTER_DF_FILENAME
 
 from pathlib import Path
 from datetime import timedelta, datetime
-from budgetmoney.constants import CAT_MAP, SHARED_EXPENSES, SHARED_NOTE_MSG, DATA_VIEW_COLS
+from budgetmoney.constants import (
+    CAT_MAP,
+    SHARED_EXPENSES,
+    SHARED_NOTE_MSG,
+    DATA_VIEW_COLS,
+)
 
 import pandas as pd
 import numpy as np
@@ -10,6 +15,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 def has_csv_files(data_path: str) -> bool:
     """Checks for csv files in a dir
@@ -100,7 +106,7 @@ def update_master_transaction_df(
             start_date = df["Date"].max() + timedelta(days=1)
             old_master_rows = df.shape[0]
             print(
-                f"Old master transaction data ends on {df["Date"].max()} and has num rows: {old_master_rows}"
+                f"Old master transaction data ends on {df['Date'].max()} and has num rows: {old_master_rows}"
             )
             master_backup_path = Path(data_path).joinpath(
                 f"backup_{MASTER_DF_FILENAME}"
@@ -117,7 +123,7 @@ def update_master_transaction_df(
         if return_msg:
             return "No csv files found to update master df with..."
         return None
-    print(f"Added {df.shape[0]-old_master_rows} new transactions to master.")
+    print(f"Added {df.shape[0] - old_master_rows} new transactions to master.")
     print("Applying validation checks and transformations...")
     df = apply_transformations(df)
     master_save_path = Path(data_path).joinpath(f"{MASTER_DF_FILENAME}")
