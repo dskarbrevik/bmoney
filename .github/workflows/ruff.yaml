@@ -1,4 +1,4 @@
-name: Ruff Lint and Auto-Fix
+name: Ruff Lint and Formatting
 on:
     pull_request:
       types: [opened, synchronize, reopened]
