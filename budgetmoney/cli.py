@@ -9,8 +9,9 @@ from budgetmoney.utils.data import (
     load_master_transaction_df,
 )
 from budgetmoney.utils.gcloud import GSheetsClient
-
-
+from budgetmoney.utils.config import create_config_file, load_config_file
+from budgetmoney.constants import MASTER_DF_FILENAME, MASTER_COLUMNS, CONFIG_JSON_FILENAME
+import pandas as pd
 import os
 from dotenv import load_dotenv
 
@@ -20,7 +21,32 @@ app = typer.Typer()
 
 
 @app.command()
-def launch(data_dir: str):
+def init(path: str = ".",
+         no_update: bool = False):
+    config_path_root = Path(path)
+    if not config_path_root.exists():
+        raise Exception(f"The path: '{config_path_root.resolve().as_posix()}' does not exist!")
+    
+    config_path_json = Path(config_path_root / CONFIG_JSON_FILENAME)
+    if not config_path_json.exists():
+        create_config_file()
+
+    config = load_config_file() # get user config
+
+    config_path_df = Path(config_path_root / config.get("MASTER_DF_FILENAME",MASTER_DF_FILENAME))
+    if not config_path_df.exists():
+        df = pd.DataFrame(columns=config.get("MASTER_COLUMNS",MASTER_COLUMNS))
+        df.to_json(config_path_df, orient="records", lines=True)
+        if not no_update:
+            update_master_transaction_df(config_path_df)
+    else:
+        print("Master transaction file found... skipping.")
+
+
+
+
+@app.command()
+def launch(data_dir: str = "."):
     if not Path(data_dir).exists():
         raise Exception(f"The data dir: '{data_dir}' does not exist!")
     app_location = find_spec("budgetmoney.app.app").origin
@@ -29,7 +55,7 @@ def launch(data_dir: str):
 
 @app.command()
 def update(
-    data_dir: str,
+    data_dir: str = ".",
     validate: Annotated[
         bool,
         typer.Option(
@@ -46,7 +72,7 @@ def update(
 
 
 @app.command()
-def sync(data_dir: str):
+def sync(data_dir: str = "."):
     if not Path(data_dir).exists():
         raise Exception(f"The data dir: '{data_dir}' does not exist!")
     df = load_master_transaction_df(data_dir)

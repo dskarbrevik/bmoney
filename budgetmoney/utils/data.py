@@ -3,14 +3,13 @@ from budgetmoney.constants import MASTER_DF_FILENAME
 from pathlib import Path
 from datetime import timedelta, datetime
 from budgetmoney.constants import CAT_MAP, SHARED_EXPENSES, SHARED_NOTE_MSG
-
+from budgetmoney.utils.config import load_config_file
 import pandas as pd
 import numpy as np
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-
 
 def has_csv_files(data_path: str) -> bool:
     """Checks for csv files in a dir
@@ -47,7 +46,6 @@ def load_master_transaction_df(
         data_path (str): where your rocket money transaction export csvs are located.
         validate (bool, optional): If true, tries to ensure the master df has the right columns etc. Defaults to False.
     """
-
     master_df_path = Path(data_path).joinpath(MASTER_DF_FILENAME)
     if master_df_path.exists():
         print(f"Loading master transaction data from: {master_df_path}")
@@ -82,7 +80,6 @@ def update_master_transaction_df(
     Returns:
         pd.DataFrame: new master df with new transactions
     """
-
     df = load_master_transaction_df(data_path)
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame()
@@ -162,11 +159,12 @@ def apply_note_check(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Same df you input with SHARED set to True where Note=SHARED_NOTE_MSG
     """
+    config = load_config_file() # get user config
 
     df.loc[df["Note"].isnull(), "Note"] = ""
     df.loc[df["Note"].isin(["nan", "None"]), "Note"] = ""
 
-    df.loc[df["Note"].str.lower().str.strip() == SHARED_NOTE_MSG, "SHARED"] = True
+    df.loc[df["Note"].str.lower().str.strip() == config.get("SHARED_NOTE_MSG",SHARED_NOTE_MSG), "SHARED"] = True
 
     return df
 
@@ -195,8 +193,9 @@ def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Same df you input with 1 new column "CUSTOM_CAT"
     """
+    config = load_config_file() # get user config
 
-    df["CUSTOM_CAT"] = df["Category"].apply(lambda x: CAT_MAP.get(x, "UNKNOWN"))
+    df["CUSTOM_CAT"] = df.apply(lambda x: config.get("CAT_MAP",CAT_MAP).get(x["Category"], "UNKNOWN") if (bool(np.isnan(x["LATEST_UPDATE"])) or not x["CUSTOM_CAT"]) else x["CUSTOM_CAT"],axis=1)
 
     return df
 
@@ -210,15 +209,17 @@ def apply_shared(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Same df you input with 1 new column "SHARED"
     """
+    config = load_config_file() # get user config
+
     if "SHARED" in df.columns:
         df["SHARED"] = np.where(
             df["SHARED"].isnull(),
-            np.where(df["CUSTOM_CAT"].isin(SHARED_EXPENSES), True, False),
+            np.where(df["CUSTOM_CAT"].isin(config.get("SHARED_EXPENSES",SHARED_EXPENSES)), True, False),
             df["SHARED"],
         )
 
     else:
-        df["SHARED"] = np.where(df["CUSTOM_CAT"].isin(SHARED_EXPENSES), True, False)
+        df["SHARED"] = np.where(df["CUSTOM_CAT"].isin(config.get("SHARED_EXPENSES",SHARED_EXPENSES)), True, False)
     return df
 
 
@@ -279,6 +280,8 @@ def monthly_gsheets_cost_table(
     Returns:
         pd.Series: total category spend per month
     """
+    config = load_config_file() # get user config
+
     if only_shared:
         df = df[df["SHARED"]]
     cat_df = (
@@ -290,7 +293,7 @@ def monthly_gsheets_cost_table(
     cat_df["Person"] = os.getenv("BUDGET_MONEY_USER", "UNKNOWN")
     cat_df = cat_df.rename(columns={"CUSTOM_CAT": "Category"})
     if only_shared:
-        cat_df = cat_df[cat_df["Category"].isin(SHARED_EXPENSES)]
+        cat_df = cat_df[cat_df["Category"].isin(config.get("SHARED_EXPENSES",SHARED_EXPENSES))]
     cat_df = cat_df[["Date", "Person", "Category", "Amount"]]
     cat_df["dt"] = pd.to_datetime(cat_df["Date"], format="%m/%y")
     cat_df = cat_df.sort_values(by=["dt"], ascending=False, ignore_index=True)
@@ -302,7 +305,7 @@ def monthly_gsheets_cost_table(
     # pivot_df = pivot_df.apply(round,axis=1)
     pivot_df = pivot_df.fillna(0)
     pivot_df.columns.name = None
-    for cat in SHARED_EXPENSES:
+    for cat in config.get("SHARED_EXPENSES",SHARED_EXPENSES):
         if cat not in pivot_df.columns:
             pivot_df[cat] = 0
     if return_values:
