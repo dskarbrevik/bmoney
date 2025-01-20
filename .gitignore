@@ -170,7 +170,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# budgetmoney csv file location
+# bmoney csv file location
 /data
 
 # experiments while developing budget money

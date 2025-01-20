@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, mock_open
 import pandas as pd
 from pathlib import Path
-from budgetmoney.utils.data import load_master_transaction_df
+from bmoney.utils.data import load_master_transaction_df
 
 MASTER_DF_FILENAME = "BUDGET_MONEY_TRANSACTIONS.jsonl"
 MOCK_DATA_PATH = "/tests/data"
@@ -47,7 +47,7 @@ def test_load_master_transaction_df_validate(mock_jsonl_data, mock_master_path):
         patch("pandas.read_json") as mock_read_json,
         patch("pathlib.Path.exists", return_value=True),
         patch("pandas.DataFrame.to_json") as mock_to_json,
-        patch("budgetmoney.utils.data.apply_transformations", side_effect=lambda x: x),
+        patch("bmoney.utils.data.apply_transformations", side_effect=lambda x: x),
     ):
         mock_df = pd.DataFrame(
             [{"Date": "2023-01-01", "Amount": 100, "Category": "Food"}]

@@ -4,13 +4,13 @@ from pathlib import Path
 from importlib.util import find_spec
 import subprocess
 
-from budgetmoney.utils.data import (
+from bmoney.utils.data import (
     update_master_transaction_df,
     load_master_transaction_df,
 )
-from budgetmoney.utils.gcloud import GSheetsClient
-from budgetmoney.utils.config import create_config_file, load_config_file
-from budgetmoney.constants import (
+from bmoney.utils.gcloud import GSheetsClient
+from bmoney.utils.config import create_config_file, load_config_file
+from bmoney.constants import (
     MASTER_DF_FILENAME,
     MASTER_COLUMNS,
     CONFIG_JSON_FILENAME,
@@ -54,7 +54,7 @@ def init(path: str = ".", no_update: bool = False):
 def launch(data_dir: str = "."):
     if not Path(data_dir).exists():
         raise Exception(f"The data dir: '{data_dir}' does not exist!")
-    app_location = find_spec("budgetmoney.app.app").origin
+    app_location = find_spec("bmoney.app.app").origin
     subprocess.run(["streamlit", "run", app_location, "--", f"{data_dir}"])
 
 

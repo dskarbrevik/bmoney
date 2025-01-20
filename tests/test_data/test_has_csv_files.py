@@ -1,5 +1,5 @@
 import pytest
-from budgetmoney.utils.data import has_csv_files
+from bmoney.utils.data import has_csv_files
 
 
 def test_has_csv_files_with_csv_files(tmp_path):

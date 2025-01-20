@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from budgetmoney.constants import (
+from bmoney.constants import (
     CONFIG_JSON_FILENAME,
     MASTER_DF_FILENAME,
     SHARED_EXPENSES,

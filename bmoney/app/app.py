@@ -3,19 +3,19 @@ import pandas as pd
 import numpy as np
 import sys
 from pathlib import Path
-from budgetmoney.utils.data import (
+from bmoney.utils.data import (
     last_30_cat_spend,
     load_master_transaction_df,
     apply_transformations,
 )
-from budgetmoney.utils.gcloud import GSheetsClient
-from budgetmoney.constants import (
+from bmoney.utils.gcloud import GSheetsClient
+from bmoney.constants import (
     MASTER_DF_FILENAME,
     SHARED_EXPENSES,
     CAT_MAP,
     DATA_VIEW_COLS,
 )
-from budgetmoney.utils.config import load_config_file
+from bmoney.utils.config import load_config_file
 
 from datetime import datetime, timedelta
 import calendar

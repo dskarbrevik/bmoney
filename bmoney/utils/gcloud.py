@@ -5,7 +5,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-from budgetmoney.utils.data import monthly_gsheets_cost_table
+from bmoney.utils.data import monthly_gsheets_cost_table
 
 from pathlib import Path
 import pandas as pd

@@ -1,9 +1,9 @@
-from budgetmoney.constants import MASTER_DF_FILENAME
+from bmoney.constants import MASTER_DF_FILENAME
 
 from pathlib import Path
 from datetime import timedelta, datetime
-from budgetmoney.constants import CAT_MAP, SHARED_EXPENSES, SHARED_NOTE_MSG
-from budgetmoney.utils.config import load_config_file
+from bmoney.constants import CAT_MAP, SHARED_EXPENSES, SHARED_NOTE_MSG
+from bmoney.utils.config import load_config_file
 import pandas as pd
 import numpy as np
 import os
