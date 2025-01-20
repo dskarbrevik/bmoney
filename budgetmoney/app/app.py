@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()  # get env vars
-config = load_config_file() # get user config
+config = load_config_file()  # get user config
 
 
 def change_text():
@@ -99,20 +99,25 @@ two_months_ago = datetime.combine(
 # INITIALIZE SESSION STATE VARIABLES
 if "data_path" not in st.session_state:
     data_path = sys.argv[-1]
-    df_path = Path(data_path).joinpath(config.get("MASTER_DF_FILENAME",MASTER_DF_FILENAME)).resolve().as_posix()
+    df_path = (
+        Path(data_path)
+        .joinpath(config.get("MASTER_DF_FILENAME", MASTER_DF_FILENAME))
+        .resolve()
+        .as_posix()
+    )
     if not Path(df_path).exists():
         if Path(data_path).exists():
             df = load_master_transaction_df(data_path)
             if not isinstance(df, pd.DataFrame):
                 raise FileNotFoundError(
-                    f"There is no master transaction jsonl in your data dir ('{config.get("MASTER_DF_FILENAME",MASTER_DF_FILENAME)}').\n\nMake sure there is a rocket money transaciton csv in the data dir and try `bmoney update {data_path}` before launching the bmoney app again."
+                    f"There is no master transaction jsonl in your data dir ('{config.get('MASTER_DF_FILENAME', MASTER_DF_FILENAME)}').\n\nMake sure there is a rocket money transaciton csv in the data dir and try `bmoney update {data_path}` before launching the bmoney app again."
                 )
         else:
             raise FileNotFoundError(f"The data path: '{data_path}' does not exist!")
     st.session_state.data_path = data_path
     st.session_state.df_path = df_path
     st.session_state.df_backup_path = Path(data_path).joinpath(
-        f"backup_{config.get("MASTER_DF_FILENAME",MASTER_DF_FILENAME)}"
+        f"backup_{config.get('MASTER_DF_FILENAME', MASTER_DF_FILENAME)}"
     )
 if "df" not in st.session_state:
     df = pd.read_json(df_path, orient="records", lines=True)
@@ -145,7 +150,7 @@ tab1, tab2 = st.tabs(["📈 Mission Control", "🗃 Data Editor"])
 
 # dashboard view
 with tab1:
-    num_cols = len(config.get("SHARED_EXPENSES",SHARED_EXPENSES))
+    num_cols = len(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
     st.subheader(
         f"Last 30 days Dashboard ({datetime.now().strftime('%d/%m')} - {(datetime.now() - timedelta(days=30)).strftime('%d/%m')})"
     )
@@ -154,7 +159,7 @@ with tab1:
 
     col = 0
     for i, row in last_30_df.iterrows():
-        if row["CUSTOM_CAT"] in config.get("SHARED_EXPENSES",SHARED_EXPENSES):
+        if row["CUSTOM_CAT"] in config.get("SHARED_EXPENSES", SHARED_EXPENSES):
             with columns[col]:
                 st.metric(
                     label=row["CUSTOM_CAT"],
@@ -195,18 +200,22 @@ with tab2:
 
     if st.session_state.show_more_text == "show less":  # show full dataframe
         st.data_editor(
-            st.session_state.session_df[config.get("DATA_VIEW_COLS",DATA_VIEW_COLS)],
+            st.session_state.session_df[config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)],
             column_config={
                 "SHARED": st.column_config.CheckboxColumn("SHARED", pinned=True),
                 "CUSTOM_CAT": st.column_config.SelectboxColumn(
                     "CUSTOM_CAT",
-                    options=list(set(config.get("CAT_MAP",CAT_MAP).values()).union(set(config.get("SHARED_EXPENSES",SHARED_EXPENSES)))),
+                    options=list(
+                        set(config.get("CAT_MAP", CAT_MAP).values()).union(
+                            set(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
+                        )
+                    ),
                     required=True,
                     pinned=True,
                 ),
                 "Category": st.column_config.SelectboxColumn(
                     "Category",
-                    options=list(set(config.get("CAT_MAP",CAT_MAP).keys())),
+                    options=list(set(config.get("CAT_MAP", CAT_MAP).keys())),
                     required=True,
                 ),
                 "Note": st.column_config.TextColumn("Note"),
@@ -220,18 +229,22 @@ with tab2:
         st.data_editor(
             st.session_state.session_df[
                 st.session_state.session_df["Date"] >= two_months_ago
-            ][config.get("DATA_VIEW_COLS",DATA_VIEW_COLS)],
+            ][config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)],
             column_config={
                 "SHARED": st.column_config.CheckboxColumn("SHARED", pinned=True),
                 "CUSTOM_CAT": st.column_config.SelectboxColumn(
                     "CUSTOM_CAT",
-                    options=list(set(config.get("CAT_MAP",CAT_MAP).values()).union(set(config.get("SHARED_EXPENSES",SHARED_EXPENSES)))),
+                    options=list(
+                        set(config.get("CAT_MAP", CAT_MAP).values()).union(
+                            set(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
+                        )
+                    ),
                     required=True,
                     pinned=True,
                 ),
                 "Category": st.column_config.SelectboxColumn(
                     "Category",
-                    options=list(set(config.get("CAT_MAP",CAT_MAP).keys())),
+                    options=list(set(config.get("CAT_MAP", CAT_MAP).keys())),
                     required=True,
                 ),
                 "Note": st.column_config.TextColumn("Note"),

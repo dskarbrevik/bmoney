@@ -10,7 +10,11 @@ from budgetmoney.utils.data import (
 )
 from budgetmoney.utils.gcloud import GSheetsClient
 from budgetmoney.utils.config import create_config_file, load_config_file
-from budgetmoney.constants import MASTER_DF_FILENAME, MASTER_COLUMNS, CONFIG_JSON_FILENAME
+from budgetmoney.constants import (
+    MASTER_DF_FILENAME,
+    MASTER_COLUMNS,
+    CONFIG_JSON_FILENAME,
+)
 import pandas as pd
 import os
 from dotenv import load_dotenv
@@ -21,28 +25,29 @@ app = typer.Typer()
 
 
 @app.command()
-def init(path: str = ".",
-         no_update: bool = False):
+def init(path: str = ".", no_update: bool = False):
     config_path_root = Path(path)
     if not config_path_root.exists():
-        raise Exception(f"The path: '{config_path_root.resolve().as_posix()}' does not exist!")
-    
+        raise Exception(
+            f"The path: '{config_path_root.resolve().as_posix()}' does not exist!"
+        )
+
     config_path_json = Path(config_path_root / CONFIG_JSON_FILENAME)
     if not config_path_json.exists():
         create_config_file()
 
-    config = load_config_file() # get user config
+    config = load_config_file()  # get user config
 
-    config_path_df = Path(config_path_root / config.get("MASTER_DF_FILENAME",MASTER_DF_FILENAME))
+    config_path_df = Path(
+        config_path_root / config.get("MASTER_DF_FILENAME", MASTER_DF_FILENAME)
+    )
     if not config_path_df.exists():
-        df = pd.DataFrame(columns=config.get("MASTER_COLUMNS",MASTER_COLUMNS))
+        df = pd.DataFrame(columns=config.get("MASTER_COLUMNS", MASTER_COLUMNS))
         df.to_json(config_path_df, orient="records", lines=True)
         if not no_update:
             update_master_transaction_df(config_path_df)
     else:
         print("Master transaction file found... skipping.")
-
-
 
 
 @app.command()

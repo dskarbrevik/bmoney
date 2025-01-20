@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def has_csv_files(data_path: str) -> bool:
     """Checks for csv files in a dir
 
@@ -159,12 +160,16 @@ def apply_note_check(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Same df you input with SHARED set to True where Note=SHARED_NOTE_MSG
     """
-    config = load_config_file() # get user config
+    config = load_config_file()  # get user config
 
     df.loc[df["Note"].isnull(), "Note"] = ""
     df.loc[df["Note"].isin(["nan", "None"]), "Note"] = ""
 
-    df.loc[df["Note"].str.lower().str.strip() == config.get("SHARED_NOTE_MSG",SHARED_NOTE_MSG), "SHARED"] = True
+    df.loc[
+        df["Note"].str.lower().str.strip()
+        == config.get("SHARED_NOTE_MSG", SHARED_NOTE_MSG),
+        "SHARED",
+    ] = True
 
     return df
 
@@ -193,9 +198,14 @@ def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Same df you input with 1 new column "CUSTOM_CAT"
     """
-    config = load_config_file() # get user config
+    config = load_config_file()  # get user config
 
-    df["CUSTOM_CAT"] = df.apply(lambda x: config.get("CAT_MAP",CAT_MAP).get(x["Category"], "UNKNOWN") if (bool(np.isnan(x["LATEST_UPDATE"])) or not x["CUSTOM_CAT"]) else x["CUSTOM_CAT"],axis=1)
+    df["CUSTOM_CAT"] = df.apply(
+        lambda x: config.get("CAT_MAP", CAT_MAP).get(x["Category"], "UNKNOWN")
+        if (bool(np.isnan(x["LATEST_UPDATE"])) or not x["CUSTOM_CAT"])
+        else x["CUSTOM_CAT"],
+        axis=1,
+    )
 
     return df
 
@@ -209,17 +219,25 @@ def apply_shared(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Same df you input with 1 new column "SHARED"
     """
-    config = load_config_file() # get user config
+    config = load_config_file()  # get user config
 
     if "SHARED" in df.columns:
         df["SHARED"] = np.where(
             df["SHARED"].isnull(),
-            np.where(df["CUSTOM_CAT"].isin(config.get("SHARED_EXPENSES",SHARED_EXPENSES)), True, False),
+            np.where(
+                df["CUSTOM_CAT"].isin(config.get("SHARED_EXPENSES", SHARED_EXPENSES)),
+                True,
+                False,
+            ),
             df["SHARED"],
         )
 
     else:
-        df["SHARED"] = np.where(df["CUSTOM_CAT"].isin(config.get("SHARED_EXPENSES",SHARED_EXPENSES)), True, False)
+        df["SHARED"] = np.where(
+            df["CUSTOM_CAT"].isin(config.get("SHARED_EXPENSES", SHARED_EXPENSES)),
+            True,
+            False,
+        )
     return df
 
 
@@ -280,7 +298,7 @@ def monthly_gsheets_cost_table(
     Returns:
         pd.Series: total category spend per month
     """
-    config = load_config_file() # get user config
+    config = load_config_file()  # get user config
 
     if only_shared:
         df = df[df["SHARED"]]
@@ -293,7 +311,9 @@ def monthly_gsheets_cost_table(
     cat_df["Person"] = os.getenv("BUDGET_MONEY_USER", "UNKNOWN")
     cat_df = cat_df.rename(columns={"CUSTOM_CAT": "Category"})
     if only_shared:
-        cat_df = cat_df[cat_df["Category"].isin(config.get("SHARED_EXPENSES",SHARED_EXPENSES))]
+        cat_df = cat_df[
+            cat_df["Category"].isin(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
+        ]
     cat_df = cat_df[["Date", "Person", "Category", "Amount"]]
     cat_df["dt"] = pd.to_datetime(cat_df["Date"], format="%m/%y")
     cat_df = cat_df.sort_values(by=["dt"], ascending=False, ignore_index=True)
@@ -305,7 +325,7 @@ def monthly_gsheets_cost_table(
     # pivot_df = pivot_df.apply(round,axis=1)
     pivot_df = pivot_df.fillna(0)
     pivot_df.columns.name = None
-    for cat in config.get("SHARED_EXPENSES",SHARED_EXPENSES):
+    for cat in config.get("SHARED_EXPENSES", SHARED_EXPENSES):
         if cat not in pivot_df.columns:
             pivot_df[cat] = 0
     if return_values:
