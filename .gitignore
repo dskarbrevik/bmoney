@@ -176,3 +176,9 @@ cython_debug/
 # experiments while developing budget money
 *.ipynb
 /experimental
+
+# macos
+*.DS_Store
+
+# vscode 
+*.code-workspace    
