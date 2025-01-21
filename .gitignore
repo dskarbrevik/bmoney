@@ -170,8 +170,17 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# budgetmoney csv file location
+# bmoney csv file location
 /data
 
-# tests developing budget money
+# experiments while developing budget money
 *.ipynb
+/experimental
+/test
+
+# macos
+*.DS_Store
+
+# vscode 
+*.code-workspace    
+

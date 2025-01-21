@@ -1,4 +1,4 @@
-name: Ruff Lint and Auto-Fix
+name: Ruff Lint and Formatting
 on:
     pull_request:
       types: [opened, synchronize, reopened]
@@ -15,10 +15,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with: 
-          python-version: 3.12  # Use the Python version your project requires.
-
+          python-version: 3.12
       - name: Ruff linting check
         id: ruff_check
         uses: astral-sh/ruff-action@v3

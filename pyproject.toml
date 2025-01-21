@@ -1,9 +1,12 @@
 [project]
-name = "budgetmoney"
-version = "0.1.0"
-description = "A Rocket Money transaction analyzer tool"
+name = "bmoney"
+version = "0.2.0"
+authors = [{name="David Skarbrevik"}]
+license = "MIT"
+license-files = ["LICENSE"]
+description = "Budget Money - powerful budgeting tools extending Rocket Money transaction exports"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10, <3.14"
 dependencies = [
     "google-api-core>=2.24.0",
     "google-api-python-client>=2.158.0",
@@ -19,20 +22,25 @@ dependencies = [
     "typer>=0.15.1",
 ]
 
-[project.optional-dependencies]
+[project.urls]
+Homepage = "https://github.com/dskarbrevik/budget-money"
+Issues = "https://github.com/dskarbrevik/budget-money/issues"
+
+[dependency-groups]
 dev = [
+    "pytest>=8.3.4",
     "ruff>=0.8.6",
     "ipykernel>=6.29.5",
     "jupyterlab>=4.3.4",
+    "pytest-cov>=6.0.0",
 ]
+
+[project.scripts]
+bmoney = "bmoney.cli:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[project.scripts]
-bmoney = "budgetmoney.cli:app"
-
 [tool.hatch.build.targets.wheel]
-packages = ["budgetmoney"]
-
+packages = ["bmoney"]

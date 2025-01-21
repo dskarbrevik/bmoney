@@ -3,18 +3,20 @@ import pandas as pd
 import numpy as np
 import sys
 from pathlib import Path
-from budgetmoney.utils.data import (
+from bmoney.utils.data import (
     last_30_cat_spend,
     load_master_transaction_df,
     apply_transformations,
 )
-from budgetmoney.utils.gcloud import GSheetsClient
-from budgetmoney.constants import (
+from bmoney.utils.gcloud import GSheetsClient
+from bmoney.constants import (
     MASTER_DF_FILENAME,
     SHARED_EXPENSES,
     CAT_MAP,
     DATA_VIEW_COLS,
 )
+from bmoney.utils.config import load_config_file
+
 from datetime import datetime, timedelta
 import calendar
 
@@ -22,6 +24,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()  # get env vars
+config = load_config_file()  # get user config
 
 
 def change_text():
@@ -47,6 +50,7 @@ def save_df():
             st.session_state.data_path, validate=False
         )
         st.session_state.edit_df = st.session_state.df.copy()
+        st.session_state.session_df = st.session_state.df.copy()
     else:
         st.toast("Data has not changed yet...", icon="❌")
 
@@ -95,20 +99,25 @@ two_months_ago = datetime.combine(
 # INITIALIZE SESSION STATE VARIABLES
 if "data_path" not in st.session_state:
     data_path = sys.argv[-1]
-    df_path = Path(data_path).joinpath(MASTER_DF_FILENAME).resolve().as_posix()
+    df_path = (
+        Path(data_path)
+        .joinpath(config.get("MASTER_DF_FILENAME", MASTER_DF_FILENAME))
+        .resolve()
+        .as_posix()
+    )
     if not Path(df_path).exists():
         if Path(data_path).exists():
             df = load_master_transaction_df(data_path)
             if not isinstance(df, pd.DataFrame):
                 raise FileNotFoundError(
-                    f"There is no master transaction jsonl in your data dir ('{MASTER_DF_FILENAME}').\n\nMake sure there is a rocket money transaciton csv in the data dir and try `bmoney update {data_path}` before launching the bmoney app again."
+                    f"There is no master transaction jsonl in your data dir ('{config.get('MASTER_DF_FILENAME', MASTER_DF_FILENAME)}').\n\nMake sure there is a rocket money transaciton csv in the data dir and try `bmoney update {data_path}` before launching the bmoney app again."
                 )
         else:
             raise FileNotFoundError(f"The data path: '{data_path}' does not exist!")
     st.session_state.data_path = data_path
     st.session_state.df_path = df_path
     st.session_state.df_backup_path = Path(data_path).joinpath(
-        f"backup_{MASTER_DF_FILENAME}"
+        f"backup_{config.get('MASTER_DF_FILENAME', MASTER_DF_FILENAME)}"
     )
 if "df" not in st.session_state:
     df = pd.read_json(df_path, orient="records", lines=True)
@@ -128,29 +137,51 @@ if "session_df" not in st.session_state:
 
 # google spreadsheets client init
 gclient = GSheetsClient(
-    sheet_id=os.getenv("SPREADSHEET_ID"),
-    sa_cred_path=os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
+    sheet_id=config.get("GSHEETS_CONFIG").get("SPREADSHEET_ID")
+    or os.getenv("SPREADSHEET_ID"),
+    sa_cred_path=config.get("GSHEETS_CONFIG").get("GCP_SERVICE_ACCOUNT_PATH")
+    or os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
 )
 
+
+st.set_page_config(
+    page_title="Budget Money",
+    page_icon="\U0001f680",
+    layout="wide",
+    menu_items={
+        "About": None,
+        "Report a bug": "https://github.com/dskarbrevik/bmoney/issues",
+    },
+)
+# st.config.set_option('client.toolbarMode', 'viewer')
 # Main app setup
-st.set_page_config(page_title="Budget Money", page_icon="\U0001f680", layout="wide")
+st.markdown(
+    """
+    <style>
+    .stAppDeployButton {
+        visibility: hidden;
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
 st.title("Budget Money 🚀")
-username = os.getenv("BUDGET_MONEY_USER")
+username = config.get("BUDGET_MONEY_USER", os.getenv("BUDGET_MONEY_USER"))
 st.subheader(f"Hi {username}! Happy {datetime.now().strftime('%A')} 😎")
 tab1, tab2 = st.tabs(["📈 Mission Control", "🗃 Data Editor"])
 
 # dashboard view
 with tab1:
-    num_cols = len(SHARED_EXPENSES)
+    num_cols = len(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
     st.subheader(
-        f"Last 30 days Dashboard ({datetime.now().strftime('%d/%m')} - {(datetime.now() - timedelta(days=30)).strftime('%d/%m')})"
+        f"Last 30 days Dashboard ({datetime.now().strftime('%m/%d')} - {(datetime.now() - timedelta(days=30)).strftime('%m/%d')})"
     )
     columns = st.columns(num_cols)
     last_30_df, start, end = last_30_cat_spend(st.session_state.df)
 
     col = 0
     for i, row in last_30_df.iterrows():
-        if row["CUSTOM_CAT"] in SHARED_EXPENSES:
+        if row["CUSTOM_CAT"] in config.get("SHARED_EXPENSES", SHARED_EXPENSES):
             with columns[col]:
                 st.metric(
                     label=row["CUSTOM_CAT"],
@@ -173,7 +204,9 @@ with tab2:
                 "WARNING: You have unsaved changes in the data editor that were included in the gsheets sync. Please consider saving changes."
             )
         response = gclient.sync_sheet(
-            gsheet_df, sheet_name=os.getenv("SPREADSHEET_TAB_NAME")
+            gsheet_df,
+            sheet_name=config.get("GSHEETS_CONFIG").get("SPREADSHEET_TAB_NAME")
+            or os.getenv("SPREADSHEET_TAB_NAME"),
         )
         if response["status"] == 1:
             st.toast("Sync successful!", icon="👌")
@@ -191,18 +224,22 @@ with tab2:
 
     if st.session_state.show_more_text == "show less":  # show full dataframe
         st.data_editor(
-            st.session_state.session_df[DATA_VIEW_COLS],
+            st.session_state.session_df[config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)],
             column_config={
                 "SHARED": st.column_config.CheckboxColumn("SHARED", pinned=True),
                 "CUSTOM_CAT": st.column_config.SelectboxColumn(
                     "CUSTOM_CAT",
-                    options=list(set(CAT_MAP.values())),
+                    options=list(
+                        set(config.get("CAT_MAP", CAT_MAP).values()).union(
+                            set(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
+                        )
+                    ),
                     required=True,
                     pinned=True,
                 ),
                 "Category": st.column_config.SelectboxColumn(
                     "Category",
-                    options=list(set(CAT_MAP.keys())),
+                    options=list(set(config.get("CAT_MAP", CAT_MAP).keys())),
                     required=True,
                 ),
                 "Note": st.column_config.TextColumn("Note"),
@@ -216,18 +253,22 @@ with tab2:
         st.data_editor(
             st.session_state.session_df[
                 st.session_state.session_df["Date"] >= two_months_ago
-            ][DATA_VIEW_COLS],
+            ][config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)],
             column_config={
                 "SHARED": st.column_config.CheckboxColumn("SHARED", pinned=True),
                 "CUSTOM_CAT": st.column_config.SelectboxColumn(
                     "CUSTOM_CAT",
-                    options=list(set(CAT_MAP.values())),
+                    options=list(
+                        set(config.get("CAT_MAP", CAT_MAP).values()).union(
+                            set(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
+                        )
+                    ),
                     required=True,
                     pinned=True,
                 ),
                 "Category": st.column_config.SelectboxColumn(
                     "Category",
-                    options=list(set(CAT_MAP.keys())),
+                    options=list(set(config.get("CAT_MAP", CAT_MAP).keys())),
                     required=True,
                 ),
                 "Note": st.column_config.TextColumn("Note"),

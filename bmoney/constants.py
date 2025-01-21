@@ -6,6 +6,8 @@ Constants used by other functions.
 # Over time you may have new rocket money export csvs but this file persists forever.
 MASTER_DF_FILENAME = "BUDGET_MONEY_TRANSACTIONS.jsonl"
 
+# name of config file in main project directory
+CONFIG_JSON_FILENAME = "config.json"
 
 # Maps Rocket Money categories to your own custom categories
 # Here I'm using a mapping that results in fewer more high level categories to make budgeting easier
@@ -17,7 +19,7 @@ CAT_MAP = {
     "Uncategorized": "UNKNOWN",
     "Shopping": "OTHER",
     "Income": "INCOME",
-    "Bills & Utilities": "OTHER",
+    "Bills & Utilities": "SERVICES",
     "Entertainment & Rec.": "ENTERTAINMENT",
     "Internal Transfers": "BANK TRANS",
     "Pets": "PET",
@@ -67,3 +69,27 @@ DATA_VIEW_COLS = [
 
 # if Note col equals this msg, SHARED will be set to True
 SHARED_NOTE_MSG = "shared"
+
+
+# All columns that make up the master transaction jsonl file
+MASTER_COLUMNS = [
+    "Date",
+    "Original Date",
+    "Account Type",
+    "Account Name",
+    "Account Number",
+    "Institution Name",
+    "Name",
+    "Custom Name",
+    "Amount",
+    "Description",
+    "Category",
+    "Note",
+    "Ignored From",
+    "Tax Deductible",
+    "CUSTOM_CAT",
+    "MONTH",
+    "YEAR",
+    "SHARED",
+    "LATEST_UPDATE",
+]
