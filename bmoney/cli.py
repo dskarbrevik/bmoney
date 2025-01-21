@@ -83,15 +83,28 @@ def update(
 
 @app.command()
 def sync(data_dir: str = "."):
+    config = load_config_file()
     if not Path(data_dir).exists():
-        raise Exception(f"The data dir: '{data_dir}' does not exist!")
+        print(f"ERROR: The data dir: '{data_dir}' does not exist!")
+        return
     df = load_master_transaction_df(data_dir)
-    gs_client = GSheetsClient(
-        sheet_id=os.getenv("SPREADSHEET_ID"),
-        sa_cred_path=os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
-    )
 
-    response = gs_client.sync_sheet(df=df, sheet_name=os.getenv("SPREADSHEET_TAB_NAME"))
+    spreadsheet_id = config.get("GSHEETS_CONFIG").get("SPREADSHEET_ID") or os.getenv("SPREADSHEET_ID")
+    if not spreadsheet_id:
+        print("ERROR: Your config.json file is missing a 'SPREADSHEET_ID' value in the 'GSHEETS_CONFIG' section.")
+        return
+    gcp_service_account_path = config.get("GSHEETS_CONFIG").get("GCP_SERVICE_ACCOUNT_PATH") or os.getenv("GCP_SERVICE_ACCOUNT_PATH")
+    if not gcp_service_account_path:
+        print("ERROR: Your config.json file is missing a 'GCP_SERVICE_ACCOUNT_PATH' value in the 'GSHEETS_CONFIG' section.")
+        return
+    gs_client = GSheetsClient(
+        sheet_id=spreadsheet_id,
+        sa_cred_path=gcp_service_account_path,
+    )
+    sheet_name = config.get("GSHEETS_CONFIG").get("SPREADSHEET_TAB_NAME") or os.getenv("SPREADSHEET_TAB_NAME")
+    if not sheet_name:
+        print("ERROR: Your config.json file is missing a 'SPREADSHEET_TAB_NAME' value in the 'GSHEETS_CONFIG' section.")
+    response = gs_client.sync_sheet(df=df, sheet_name=sheet_name)
     if response["status"] == 1:
         print("Successfully synced gsheet!")
     else:

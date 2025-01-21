@@ -23,6 +23,11 @@ def create_config_file(path: str = "."):
             "SHARED_NOTE_MSG": SHARED_NOTE_MSG,
             "CAT_MAP": CAT_MAP,
             "DATA_VIEW_COLS": DATA_VIEW_COLS,
+            "GSHEETS_CONFIG":{
+                "SPREADSHEET_ID":"",
+                "SPREADSHEET_TAB_NAME":"",
+                "GCP_SERVICE_ACCOUNT_PATH":"",
+            },
         }
         with open(config_path.resolve().as_posix(), "w") as file:
             json.dump(config_dict, file, indent=4)

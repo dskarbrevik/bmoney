@@ -137,8 +137,8 @@ if "session_df" not in st.session_state:
 
 # google spreadsheets client init
 gclient = GSheetsClient(
-    sheet_id=os.getenv("SPREADSHEET_ID"),
-    sa_cred_path=os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
+    sheet_id=config.get("GSHEETS_CONFIG").get("SPREADSHEET_ID") or os.getenv("SPREADSHEET_ID"),
+    sa_cred_path=config.get("GSHEETS_CONFIG").get("GCP_SERVICE_ACCOUNT_PATH") or os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
 )
 
 
@@ -202,7 +202,7 @@ with tab2:
                 "WARNING: You have unsaved changes in the data editor that were included in the gsheets sync. Please consider saving changes."
             )
         response = gclient.sync_sheet(
-            gsheet_df, sheet_name=os.getenv("SPREADSHEET_TAB_NAME")
+            gsheet_df, sheet_name=config.get("GSHEETS_CONFIG").get("SPREADSHEET_TAB_NAME") or os.getenv("SPREADSHEET_TAB_NAME")
         )
         if response["status"] == 1:
             st.toast("Sync successful!", icon="👌")
