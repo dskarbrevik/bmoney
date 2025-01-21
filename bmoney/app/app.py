@@ -142,19 +142,29 @@ gclient = GSheetsClient(
 )
 
 
-
-st.set_page_config(page_title="Budget Money", page_icon="\U0001f680", layout="wide", menu_items={"About":None,"Report a bug":"https://github.com/dskarbrevik/bmoney/issues"})
+st.set_page_config(
+    page_title="Budget Money",
+    page_icon="\U0001f680",
+    layout="wide",
+    menu_items={
+        "About": None,
+        "Report a bug": "https://github.com/dskarbrevik/bmoney/issues",
+    },
+)
 # st.config.set_option('client.toolbarMode', 'viewer')
 # Main app setup
-st.markdown("""
+st.markdown(
+    """
     <style>
     .stAppDeployButton {
         visibility: hidden;
     }
     </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 st.title("Budget Money 🚀")
-username = config.get("BUDGET_MONEY_USER",os.getenv("BUDGET_MONEY_USER"))
+username = config.get("BUDGET_MONEY_USER", os.getenv("BUDGET_MONEY_USER"))
 st.subheader(f"Hi {username}! Happy {datetime.now().strftime('%A')} 😎")
 tab1, tab2 = st.tabs(["📈 Mission Control", "🗃 Data Editor"])
 

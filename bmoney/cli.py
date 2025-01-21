@@ -25,9 +25,11 @@ app = typer.Typer()
 
 
 @app.command()
-def init(username: Annotated[str, typer.Option(prompt=True)],
-         path: str = ".", 
-         no_update: bool = False):
+def init(
+    username: Annotated[str, typer.Option(prompt=True)],
+    path: str = ".",
+    no_update: bool = False,
+):
     config_path_root = Path(path)
     if not config_path_root.exists():
         raise Exception(

@@ -38,7 +38,8 @@ def load_config_file(path: str = ".") -> dict:
 
     return data
 
+
 def save_config_file(config: dict, path: str = "."):
-    config_path = Path(Path(path)/CONFIG_JSON_FILENAME)
+    config_path = Path(Path(path) / CONFIG_JSON_FILENAME)
     with open(config_path.resolve().as_posix(), "w") as file:
         json.dump(config, file, indent=4)

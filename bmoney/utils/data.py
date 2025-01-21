@@ -201,7 +201,6 @@ def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
     config = load_config_file()  # get user config
 
     def custom_cat(row):
-
         if isinstance(row["LATEST_UPDATE"], float):
             check = math.isnan(row["LATEST_UPDATE"])
         elif isinstance(row["LATEST_UPDATE"], np.ndarray):
@@ -216,7 +215,7 @@ def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
         else:
             return row["CUSTOM_CAT"]
 
-    df["CUSTOM_CAT"] = df.apply(custom_cat,axis=1)
+    df["CUSTOM_CAT"] = df.apply(custom_cat, axis=1)
 
     return df
 
@@ -319,7 +318,9 @@ def monthly_gsheets_cost_table(
         .reset_index()
     )
     cat_df["Date"] = cat_df["MONTH"].astype(str) + "/" + cat_df["YEAR"].astype(str)
-    cat_df["Person"] = config.get("BUDGET_MONEY_USER",os.getenv("BUDGET_MONEY_USER", "UNKNOWN"))
+    cat_df["Person"] = config.get(
+        "BUDGET_MONEY_USER", os.getenv("BUDGET_MONEY_USER", "UNKNOWN")
+    )
     cat_df = cat_df.rename(columns={"CUSTOM_CAT": "Category"})
     if only_shared:
         cat_df = cat_df[
