@@ -7,6 +7,7 @@ from bmoney.utils.config import load_config_file
 import pandas as pd
 import numpy as np
 import os
+import math
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -64,7 +65,7 @@ def load_master_transaction_df(
             df.to_json(master_df_path, orient="records", lines=True)
         return df
     else:
-        print("No master file detected. Make sure it is named {MASTER_DF_FILENAME}")
+        print(f"No master file detected. Make sure it is named {MASTER_DF_FILENAME}")
         return None
 
 
@@ -81,7 +82,7 @@ def update_master_transaction_df(
     Returns:
         pd.DataFrame: new master df with new transactions
     """
-    df = load_master_transaction_df(data_path)
+    df = load_master_transaction_df(data_path, validate=False)
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame()
 
@@ -139,13 +140,12 @@ def apply_transformations(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: enriched dataframe
     """
-
+    df = apply_latest(df)
     df = apply_custom_cat(df)
     df = apply_month(df)
     df = apply_year(df)
     df = apply_amount_float(df)
     df = apply_shared(df)
-    df = apply_latest(df)
     df = apply_note_check(df)
 
     return df
@@ -200,12 +200,23 @@ def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
     """
     config = load_config_file()  # get user config
 
-    df["CUSTOM_CAT"] = df.apply(
-        lambda x: config.get("CAT_MAP", CAT_MAP).get(x["Category"], "UNKNOWN")
-        if (bool(np.isnan(x["LATEST_UPDATE"])) or not x["CUSTOM_CAT"])
-        else x["CUSTOM_CAT"],
-        axis=1,
-    )
+    def custom_cat(row):
+
+        if isinstance(row["LATEST_UPDATE"], float):
+            check = math.isnan(row["LATEST_UPDATE"])
+        elif isinstance(row["LATEST_UPDATE"], np.ndarray):
+            check = np.isnan(row["LATEST_UPDATE"])
+        elif not row["LATEST_UPDATE"]:
+            check = True
+        if not check:
+            if not row["CUSTOM_CAT"]:
+                check = True
+        if check:
+            return config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
+        else:
+            return row["CUSTOM_CAT"]
+
+    df["CUSTOM_CAT"] = df.apply(custom_cat,axis=1)
 
     return df
 
@@ -308,7 +319,7 @@ def monthly_gsheets_cost_table(
         .reset_index()
     )
     cat_df["Date"] = cat_df["MONTH"].astype(str) + "/" + cat_df["YEAR"].astype(str)
-    cat_df["Person"] = os.getenv("BUDGET_MONEY_USER", "UNKNOWN")
+    cat_df["Person"] = config.get("BUDGET_MONEY_USER",os.getenv("BUDGET_MONEY_USER", "UNKNOWN"))
     cat_df = cat_df.rename(columns={"CUSTOM_CAT": "Category"})
     if only_shared:
         cat_df = cat_df[

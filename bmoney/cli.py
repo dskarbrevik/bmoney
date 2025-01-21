@@ -9,7 +9,7 @@ from bmoney.utils.data import (
     load_master_transaction_df,
 )
 from bmoney.utils.gcloud import GSheetsClient
-from bmoney.utils.config import create_config_file, load_config_file
+from bmoney.utils.config import create_config_file, load_config_file, save_config_file
 from bmoney.constants import (
     MASTER_DF_FILENAME,
     MASTER_COLUMNS,
@@ -25,7 +25,9 @@ app = typer.Typer()
 
 
 @app.command()
-def init(path: str = ".", no_update: bool = False):
+def init(username: Annotated[str, typer.Option(prompt=True)],
+         path: str = ".", 
+         no_update: bool = False):
     config_path_root = Path(path)
     if not config_path_root.exists():
         raise Exception(
@@ -37,7 +39,8 @@ def init(path: str = ".", no_update: bool = False):
         create_config_file()
 
     config = load_config_file()  # get user config
-
+    config["BUDGET_MONEY_USER"] = username
+    save_config_file(config=config)
     config_path_df = Path(
         config_path_root / config.get("MASTER_DF_FILENAME", MASTER_DF_FILENAME)
     )
@@ -45,7 +48,7 @@ def init(path: str = ".", no_update: bool = False):
         df = pd.DataFrame(columns=config.get("MASTER_COLUMNS", MASTER_COLUMNS))
         df.to_json(config_path_df, orient="records", lines=True)
         if not no_update:
-            update_master_transaction_df(config_path_df)
+            update_master_transaction_df(config_path_root)
     else:
         print("Master transaction file found... skipping.")
 
