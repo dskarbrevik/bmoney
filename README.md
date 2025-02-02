@@ -16,7 +16,7 @@ Budget Money (this tool) provides an easy way to  takes in one or more of these 
 - Metrics and visualization dashboard to see category spending habit in more detail
 - Export category spend data to Google Sheets 
 
-# Installation
+## Installation
 
 `pip install bmoney`
 
@@ -24,11 +24,19 @@ Once `bmoney` is installed in your environment, you can navigate to a directory 
 
 ## Basic usage
 
-`bmoney init`
+1) Create a project folder and put a Rocket Money transaction export CSV file in it.
+
+2) `bmoney init` from inside your project folder
 
 You should see a a config.json and jsonl transaction file in your folder now.
 
-`bmoney launch` to see the budget money dashboard
+3) `bmoney launch` to see the budget money dashboard with your data.
+
+
+## CLI commands
+
+
+
 
 ### Explanation of config.json file
 
@@ -40,7 +48,46 @@ Below is an explanation of variables in `config.json` along with a declaration o
 | --- | --- | --- | --- |
 | MASTER_DF_FILENAME | `str` | Filename for master jsonl transactions | |
 | SHARED_EXPENSES | `list(str)` | CUSTOM_CAT vals that will have `SHARED==True` in master df| |
-| CAT_MAP | `dict(str`) | Mapping Rocket Money categories to your own custom categories | There is an interplay between SHARED_EXPENSES and CAT_MAP. |
+| CAT_MAP | `dict(str)` | Mapping Rocket Money categories to your own custom categories | There is an interplay between SHARED_EXPENSES and CAT_MAP. |
 | DATA_VIEW_COLS | `list(str)` | The name of master df columns to show in the app's data editor tab | |
 | GSHEETS_CONFIG | `dict(str)` | Vars important for using the Google Sheets integration | |
 | BUDGET_MONEY_USER | `str` | Username, this is applied to create the Person col in the master df | This will be asked on `bmoney init` if not expressly provided to that command|
+| CUSTOM_WIDGETS | `list(dict)` | A list of widget config dicts to display in th dashboard. See example usage for more info. |
+
+### Creating a custom dashboard widget
+
+Note: Currently bmoney only supports creating custom metric type dashboard widgets
+
+There are two steps to create a custom dashboard widget:
+1) Create a python function that generates the data for your custom widget
+    a) Your function must return a dict object with the keys `title`,`value` and optionally `delta`.
+2) Update your config.json with a new entry to the CUSTOM_WIDGETS list
+
+For example we could create a script `my_new_metric.py` in our project folder with the following function:
+
+```
+from bmoney.utils.data import load_master_transaction_df
+import pandas as pd
+
+def get_category_cost_data(category):
+    df = load_master_transaction_df
+    total_amount = round(df[df["Category"]==category]["Amount"].sum(),2)
+    
+    data = {"title": f"All time {category} cost",
+            "value": total_amount}
+    return data
+```
+
+And in your `config.json` file:
+```
+"CUSTOM_WIDGETS":[{
+        "name": "Total Pet Cost",
+        "type": "metric",
+        "script_path": "./my_new_metric.py",
+        "function_name":"get_category_cost_data,
+        "args": ["Pets"],
+        "kwargs": {}
+    }]
+```
+
+Now when you run `bmoney launch` you'll see your new metric in your Mission Control (front page).

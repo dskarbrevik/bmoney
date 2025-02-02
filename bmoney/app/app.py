@@ -196,15 +196,15 @@ with tab1:
                 )
             col += 1
 
-    if config.get("CUSTOM_WIDGET"):
-        custom_num_cols = len(config.get("CUSTOM_WIDGET"))
+    if config.get("CUSTOM_WIDGETS"):
+        custom_num_cols = len(config.get("CUSTOM_WIDGETS"))
         custom_num_cols = max(custom_num_cols,5)
         st.subheader(
             "Custom Widgets"
         )
         custom_columns = st.columns(custom_num_cols)
         cols = 0
-        for widget in config.get("CUSTOM_WIDGET"):
+        for widget in config.get("CUSTOM_WIDGETS"):
             with custom_columns[cols]:
                 widget_data = run_custom_script(script_path=widget.get("script_path"),
                                                 function_name=widget.get("function_name"),

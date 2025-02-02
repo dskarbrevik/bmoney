@@ -115,4 +115,5 @@ DEFAULT_CONFIG = {
                 "SPREADSHEET_TAB_NAME": "",
                 "GCP_SERVICE_ACCOUNT_PATH": "",
             },
+            "CUSTOM_WIDGETS": []
 }
