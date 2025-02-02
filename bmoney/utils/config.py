@@ -4,6 +4,9 @@ from bmoney.constants import (
     CONFIG_JSON_FILENAME,
     DEFAULT_CONFIG,
 )
+import importlib.util
+import sys
+
 """
 Controls the config.json file that is used to store user settings.
 """
@@ -50,3 +53,23 @@ def update_config_file(config: dict = None, path: str = "."):
         print(f"Config file updated to v{DEFAULT_CONFIG.get('CONFIG_VERSION')}.")
     else:
         print(f"Config file is already up to date (v{config.get('CONFIG_VERSION')}).")
+
+
+def load_function(script_path, function_name):
+    module_name = script_path.replace("/", "_").replace("\\", "_").replace(".py", "")
+    
+    # Load the module from the given path
+    spec = importlib.util.spec_from_file_location(module_name, script_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+
+    # Get the function from the module
+    if hasattr(module, function_name):
+        return getattr(module, function_name)
+    else:
+        raise AttributeError(f"Function '{function_name}' not found in '{script_path}'")
+
+def run_custom_script(script_path, function_name, *args, **kwargs):
+    func = load_function(script_path, function_name)
+    return func(*args, **kwargs)

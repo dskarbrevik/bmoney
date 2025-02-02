@@ -15,7 +15,10 @@ from bmoney.constants import (
     CAT_MAP,
     DATA_VIEW_COLS,
 )
-from bmoney.utils.config import load_config_file
+from bmoney.utils.config import (
+    load_config_file,
+    run_custom_script
+)
 
 from datetime import datetime, timedelta
 import calendar
@@ -175,7 +178,7 @@ tab1, tab2 = st.tabs(["📈 Mission Control", "🗃 Data Editor"])
 with tab1:
     num_cols = len(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
     st.subheader(
-        f"Last 30 days Dashboard ({datetime.now().strftime('%m/%d')} - {(datetime.now() - timedelta(days=30)).strftime('%m/%d')})"
+        f"Last 30 days Dashboard ({(datetime.now() - timedelta(days=30)).strftime('%m/%d')} - {datetime.now().strftime('%m/%d')})"
     )
     columns = st.columns(num_cols)
     last_30_df, start, end = last_30_cat_spend(st.session_state.df)
@@ -192,6 +195,36 @@ with tab1:
                     border=True,
                 )
             col += 1
+
+    if config.get("CUSTOM_WIDGET"):
+        custom_num_cols = len(config.get("CUSTOM_WIDGET"))
+        custom_num_cols = max(custom_num_cols,5)
+        st.subheader(
+            "Custom Widgets"
+        )
+        custom_columns = st.columns(custom_num_cols)
+        cols = 0
+        for widget in config.get("CUSTOM_WIDGET"):
+            with custom_columns[cols]:
+                widget_data = run_custom_script(script_path=widget.get("script_path"),
+                                                function_name=widget.get("function_name"),
+                                                *widget.get("args"),
+                                                **widget.get("kwargs"))
+                if widget.get("type") == "metric":
+                    if widget_data.get("delta"):
+                        st.metric(
+                            label=widget_data.get("title"),
+                            value=widget_data.get("value"),
+                            delta=f"{widget_data.get("delta")}%",
+                            border=True,
+                        )
+                    else:
+                        st.metric(
+                            label=widget_data.get("title"),
+                            value=widget_data.get("value"),
+                            border=True,
+                        )
+            cols += 1
 
 # data editor view
 with tab2:
