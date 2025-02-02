@@ -9,11 +9,17 @@ from bmoney.utils.data import (
     load_master_transaction_df,
 )
 from bmoney.utils.gcloud import GSheetsClient
-from bmoney.utils.config import create_config_file, load_config_file, save_config_file
+from bmoney.utils.config import (
+    create_config_file,
+    load_config_file, 
+    save_config_file,
+    update_config_file,
+)
 from bmoney.constants import (
     MASTER_DF_FILENAME,
     MASTER_COLUMNS,
     CONFIG_JSON_FILENAME,
+    DEFAULT_CONFIG,
 )
 import pandas as pd
 import os
@@ -22,13 +28,20 @@ from dotenv import load_dotenv
 load_dotenv
 
 app = typer.Typer()
+db_app = typer.Typer()
+app.add_typer(db_app, name="db")
+config_app = typer.Typer()
+app.add_typer(config_app, name="config")
+gsheets_app = typer.Typer()
+app.add_typer(gsheets_app, name="gsheets")
 
 
-@app.command()
-def init(
+@app.command("init")
+def app_init(
     username: Annotated[str, typer.Option(prompt=True)],
     path: str = ".",
     no_update: bool = False,
+    force: bool = False,
 ):
     config_path_root = Path(path)
     if not config_path_root.exists():
@@ -38,9 +51,15 @@ def init(
 
     config_path_json = Path(config_path_root / CONFIG_JSON_FILENAME)
     if not config_path_json.exists():
-        create_config_file()
+        create_config_file(path=path)
+    elif not force:
+        raise Exception("This looks like an active project dir. Config file already exists... use --force to overwrite.")
+    else:
+        print("Config found, but force flag used... updating config file.")
 
     config = load_config_file()  # get user config
+    if config.get("CONFIG_VERSION") != DEFAULT_CONFIG.get("CONFIG_VERSION"):
+        config = update_config_file(config=config)
     config["BUDGET_MONEY_USER"] = username
     save_config_file(config=config)
     config_path_df = Path(
@@ -52,19 +71,19 @@ def init(
         if not no_update:
             update_master_transaction_df(config_path_root)
     else:
-        print("Master transaction file found... skipping.")
+        print("Master transaction file already found... skipping creation.")
 
 
-@app.command()
-def launch(data_dir: str = "."):
+@app.command("launch")
+def app_launch(data_dir: str = "."):
     if not Path(data_dir).exists():
         raise Exception(f"The data dir: '{data_dir}' does not exist!")
     app_location = find_spec("bmoney.app.app").origin
     subprocess.run(["streamlit", "run", app_location, "--", f"{data_dir}"])
 
 
-@app.command()
-def update(
+@db_app.command("update")
+def db_update(
     data_dir: str = ".",
     validate: Annotated[
         bool,
@@ -80,9 +99,16 @@ def update(
     response = update_master_transaction_df(data_dir, return_df=False, return_msg=True)
     print(response)
 
+@config_app.command("update")
+def config_update(
+    data_dir: str = "."
+):
+    config = load_config_file()
+    update_config_file(config=config, path=data_dir)
 
-@app.command()
-def sync(data_dir: str = "."):
+
+@gsheets_app.command("sync")
+def gsheets_sync(data_dir: str = "."):
     config = load_config_file()
     if not Path(data_dir).exists():
         print(f"ERROR: The data dir: '{data_dir}' does not exist!")

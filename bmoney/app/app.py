@@ -85,7 +85,8 @@ def update_slice_df():
         # st.session_state.edit_df["LATEST_UPDATE"] = st.session_state.edit_df["LATEST_UPDATE"].astype(int)
 
 
-# IMPORTANT TIME CONSTRUCTS
+# IMPORTANT TIME CONSTRUCTS AND SETUP
+num_rows_display = 20
 now = datetime.now()
 this_month_str = now.strftime("%m/%Y")
 start_of_month = datetime(now.year, now.month, 1)
@@ -246,6 +247,7 @@ with tab2:
                 "Date": None,
             },
             hide_index=True,
+            height=(num_rows_display + 1) * 35 + 3,
             key="edit_all_df",
             on_change=update_all_df,
         )
@@ -275,6 +277,7 @@ with tab2:
                 "Date": None,
             },
             hide_index=True,
+            height=(num_rows_display + 1) * 35 + 3,
             key="edit_slice_df",
             on_change=update_slice_df,
         )
