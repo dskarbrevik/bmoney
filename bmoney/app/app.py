@@ -239,8 +239,8 @@ with tab2:
             )
         response = gclient.sync_sheet(
             gsheet_df,
-            sheet_name=config.get("GSHEETS_CONFIG").get("SPREADSHEET_TAB_NAME")
-            or os.getenv("SPREADSHEET_TAB_NAME"),
+            sheet_name=config.get("GSHEETS_CONFIG").get("CATEGORY_TOTAL_TAB_NAME")
+            or os.getenv("CATEGORY_TOTAL_TAB_NAME"),
         )
         if response["status"] == 1:
             st.toast("Sync successful!", icon="👌")

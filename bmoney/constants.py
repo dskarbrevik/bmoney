@@ -112,8 +112,11 @@ DEFAULT_CONFIG = {
             "DATA_VIEW_COLS": DATA_VIEW_COLS,
             "GSHEETS_CONFIG": {
                 "SPREADSHEET_ID": "",
-                "SPREADSHEET_TAB_NAME": "",
-                "GCP_SERVICE_ACCOUNT_PATH": "",
+                "SPREADSHEET_TABS": {
+                    "TRANSACTIONS": "", # sheet for shared transactions
+                    "CATEGORIES": "" # sheet for shared expense custom category monthly totals
+                },
+                "GCP_SERVICE_ACCOUNT_PATH": ""
             },
             "CUSTOM_WIDGETS": []
 }

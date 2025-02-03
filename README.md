@@ -6,15 +6,13 @@ Budget Money (bmoney) is a budgeting tool that builds on top of Rocket Money tra
 
 Rocket Money allows users to export their financial transactions to a CSV file. Rocket Money (through their partnered service Plaid) provide transactions up to two years ago.
 
-Budget Money (this tool) provides an easy way to  takes in one or more of these CSVs in order to produce statistics and visualizations to help a user better understand their spending and achieve their budgeting goals.
-
+Budget Money (this tool) builds ontop of these CSVs:
 - Merge multiple Rocket Money CSV export files into one highly portable JSONL file
-- Display and easily edit your data
-- Extends Rocket Money metadata:
-    - Custom categories
-    - "Shared expenses" to make it easier to separate expenses with partners
-- Metrics and visualization dashboard to see category spending habit in more detail
-- Export category spend data to Google Sheets 
+- In browser app (streamlit)
+    - Display and easily edit all your data
+    - Custom Metrics and visualization dashboard to see category spending habit in more detail
+- Map Rocket Money categories to your own custom categories
+- Export shared transaction and category spend data to Google Sheets to
 
 ## Installation
 
@@ -33,9 +31,14 @@ You should see a a config.json and jsonl transaction file in your folder now.
 3) `bmoney launch` to see the budget money dashboard with your data.
 
 
-## CLI commands
+## CLI command quickstart
 
-
+| name | description |
+| --- | --- |
+| `bmoney init` | Initialize your project folder |
+| `bmoney launch` | Launch the bmoney browser app |
+| `bmoney db update` | Merge any CSVs into the master JSONL file |
+| `bmoney gsheets sync` | Send current data to your Google Spreadsheet |
 
 
 ### Explanation of config.json file
@@ -54,6 +57,16 @@ Below is an explanation of variables in `config.json` along with a declaration o
 | BUDGET_MONEY_USER | `str` | Username, this is applied to create the Person col in the master df | This will be asked on `bmoney init` if not expressly provided to that command|
 | CUSTOM_WIDGETS | `list(dict)` | A list of widget config dicts to display in th dashboard. See example usage for more info. |
 
+More about the GSHEETS_CONFIG dict:
+
+| name | type | description | notes |
+| --- | ---| --- | --- |
+| SPREADSHEET_ID | `str` | The ID of your Google Sheet file | |
+| SPREADSHEET_TABS | `dict` | key:val pairs for different bmoney->gsheets capabilities | Leave a Tab val as "" if you don't want to use that capability. |
+| GCP_SERVICE_ACCOUNT_PATH | `str` | The path to a json file containing GCP provided service account credentials. | See [here](https://support.google.com/a/answer/7378726?hl=en) for info on how to setup a GCP Service Account with Google Sheets access. |
+
+
+
 ### Creating a custom dashboard widget
 
 Note: Currently bmoney only supports creating custom metric type dashboard widgets
@@ -65,12 +78,12 @@ There are two steps to create a custom dashboard widget:
 
 For example we could create a script `my_new_metric.py` in our project folder with the following function:
 
-```
+```python
 from bmoney.utils.data import load_master_transaction_df
 import pandas as pd
 
 def get_category_cost_data(category):
-    df = load_master_transaction_df
+    df = load_master_transaction_df()
     total_amount = round(df[df["Category"]==category]["Amount"].sum(),2)
     
     data = {"title": f"All time {category} cost",
@@ -79,12 +92,12 @@ def get_category_cost_data(category):
 ```
 
 And in your `config.json` file:
-```
+```json
 "CUSTOM_WIDGETS":[{
         "name": "Total Pet Cost",
         "type": "metric",
         "script_path": "./my_new_metric.py",
-        "function_name":"get_category_cost_data,
+        "function_name":"get_category_cost_data",
         "args": ["Pets"],
         "kwargs": {}
     }]
