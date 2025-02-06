@@ -30,9 +30,12 @@ You should see a a config.json and jsonl transaction file in your folder now.
 
 3) `bmoney launch` to see the budget money dashboard with your data.
 
-![bmoney app homepage](assets/images/bmoney_app1.png)
+## Screenshots
 
-![bmoney app data editor](assets/images/bmoney_app2.png)
+<img src="assets/images/bmoney_app1.png" width="500" alt="bmoney dashboard">
+
+<img src="assets/images/bmoney_app2.png" width="500" alt="bmoney data editor">
+
 
 ## CLI command quickstart
 
