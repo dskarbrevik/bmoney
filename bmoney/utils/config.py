@@ -11,6 +11,7 @@ import sys
 Controls the config.json file that is used to store user settings.
 """
 
+
 def create_config_file(path: str = ".", force: bool = False):
     config_path = Path(path)
     config_path = Path(config_path / CONFIG_JSON_FILENAME)
@@ -34,15 +35,17 @@ def load_config_file(path: str = ".") -> dict:
         data = json.load(file)
     if not data:
         print("Config file is empty. Creating new config file.")
-        create_config_file(path,force=True)
+        create_config_file(path, force=True)
     with open(Path(path / CONFIG_JSON_FILENAME).resolve().as_posix(), "r") as file:
         data = json.load(file)
     return data
+
 
 def save_config_file(config: dict, path: str = "."):
     config_path = Path(Path(path) / CONFIG_JSON_FILENAME)
     with open(config_path.resolve().as_posix(), "w") as file:
         json.dump(config, file, indent=4)
+
 
 def update_config_file(config: dict = None, path: str = "."):
     if not config:
@@ -57,7 +60,7 @@ def update_config_file(config: dict = None, path: str = "."):
 
 def load_function(script_path, function_name):
     module_name = script_path.replace("/", "_").replace("\\", "_").replace(".py", "")
-    
+
     # Load the module from the given path
     spec = importlib.util.spec_from_file_location(module_name, script_path)
     module = importlib.util.module_from_spec(spec)
@@ -69,6 +72,7 @@ def load_function(script_path, function_name):
         return getattr(module, function_name)
     else:
         raise AttributeError(f"Function '{function_name}' not found in '{script_path}'")
+
 
 def run_custom_script(script_path, function_name, *args, **kwargs):
     func = load_function(script_path, function_name)
