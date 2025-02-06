@@ -2,6 +2,11 @@
 Constants used by other functions.
 """
 
+import importlib.metadata
+
+PACKAGE_NAME = __name__.split(".")[0]  # ex. bmoney
+CURRENT_VERSION = importlib.metadata.version(PACKAGE_NAME)  # ex. 0.1.0
+
 # the name of the file containing your running transactions. Essentially your database.
 # Over time you may have new rocket money export csvs but this file persists forever.
 MASTER_DF_FILENAME = "BUDGET_MONEY_TRANSACTIONS.jsonl"
@@ -70,6 +75,9 @@ DATA_VIEW_COLS = [
 # if Note col equals this msg, SHARED will be set to True
 SHARED_NOTE_MSG = "shared"
 
+# if Note col equals this msg, SHARED will be set to False
+NOT_SHARED_NOTE_MSG = "not shared"
+
 
 # All columns that make up the master transaction jsonl file
 MASTER_COLUMNS = [
@@ -93,3 +101,23 @@ MASTER_COLUMNS = [
     "SHARED",
     "LATEST_UPDATE",
 ]
+
+DEFAULT_CONFIG = {
+    "CONFIG_VERSION": CURRENT_VERSION,
+    "BUDGET_MONEY_USER": "",
+    "MASTER_DF_FILENAME": MASTER_DF_FILENAME,
+    "SHARED_EXPENSES": SHARED_EXPENSES,
+    "SHARED_NOTE_MSG": SHARED_NOTE_MSG,
+    "NOT_SHARED_NOTE_MSG": NOT_SHARED_NOTE_MSG,
+    "CAT_MAP": CAT_MAP,
+    "DATA_VIEW_COLS": DATA_VIEW_COLS,
+    "GSHEETS_CONFIG": {
+        "SPREADSHEET_ID": "",
+        "SPREADSHEET_TABS": {
+            "TRANSACTIONS": "",  # sheet for shared transactions
+            "CATEGORIES": "",  # sheet for shared expense custom category monthly totals
+        },
+        "GCP_SERVICE_ACCOUNT_PATH": "",
+    },
+    "CUSTOM_WIDGETS": [],
+}

@@ -2,20 +2,19 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import sys
-from pathlib import Path
 from bmoney.utils.data import (
     last_30_cat_spend,
     load_master_transaction_df,
-    apply_transformations,
+    save_master_transaction_df,
+    backup_master_transaction_df,
 )
 from bmoney.utils.gcloud import GSheetsClient
 from bmoney.constants import (
-    MASTER_DF_FILENAME,
     SHARED_EXPENSES,
     CAT_MAP,
     DATA_VIEW_COLS,
 )
-from bmoney.utils.config import load_config_file
+from bmoney.utils.config import load_config_file, run_custom_script
 
 from datetime import datetime, timedelta
 import calendar
@@ -24,7 +23,15 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()  # get env vars
-config = load_config_file()  # get user config
+
+data_dir = sys.argv[-1]
+config = load_config_file(data_dir)  # get user config
+
+
+@st.cache_data
+def cached_run_custom_script(script_path, function_name, *args, **kwargs):
+    """Caches the result of the expensive function."""
+    return run_custom_script(script_path, function_name, *args, **kwargs)
 
 
 def change_text():
@@ -38,31 +45,38 @@ def change_text():
 
 def save_df():
     if not st.session_state.df.equals(st.session_state.edit_df):
-        st.session_state.edit_df.to_json(
-            st.session_state.df_backup_path, orient="records", lines=True
+        backup_master_transaction_df(
+            data_path=st.session_state.data_path, df=st.session_state.df
         )
-        st.session_state.edit_df = apply_transformations(st.session_state.edit_df)
-        st.session_state.edit_df.to_json(
-            st.session_state.df_path, orient="records", lines=True
+        print("in save_df")
+        # print(st.session_state.edit_df.iloc[1347])
+        # st.session_state.edit_df = apply_transformations(st.session_state.edit_df)
+        # print(st.session_state.edit_df.iloc[1347])
+        save_master_transaction_df(
+            data_path=st.session_state.data_path,
+            df=st.session_state.edit_df,
+            verbose=True,
         )
         st.toast("Save successful!", icon="👌")
         st.session_state.df = load_master_transaction_df(
-            st.session_state.data_path, validate=False
+            st.session_state.data_path, validate=False, verbose=False
         )
-        st.session_state.edit_df = st.session_state.df.copy()
-        st.session_state.session_df = st.session_state.df.copy()
+        # print(st.session_state.edit_df.iloc[224])
+        # st.session_state.edit_df = st.session_state.df.copy()
+        # print(st.session_state.edit_df.iloc[224])
+        # st.session_state.session_df = st.session_state.df.copy()
     else:
         st.toast("Data has not changed yet...", icon="❌")
 
 
 def update_all_df():
     if st.session_state["edit_all_df"]["edited_rows"]:
-        st.session_state.tmp_df = pd.DataFrame.from_dict(
+        tmp_df = pd.DataFrame.from_dict(
             st.session_state["edit_all_df"]["edited_rows"], orient="index"
         )
-        st.session_state.edit_df.loc[
-            st.session_state.tmp_df.index, st.session_state.tmp_df.columns
-        ] = st.session_state.tmp_df.copy()
+        print(tmp_df.index)
+        print(st.session_state.session_df.iloc[tmp_df.index]["Name"])
+        st.session_state.edit_df.loc[tmp_df.index, tmp_df.columns] = tmp_df.copy()
         update_time = int(round(datetime.now().timestamp()))
         st.session_state.edit_df.loc[
             st.session_state["edit_all_df"]["edited_rows"].keys(), "LATEST_UPDATE"
@@ -70,22 +84,8 @@ def update_all_df():
         # st.session_state.edit_df["LATEST_UPDATE"] = st.session_state.edit_df["LATEST_UPDATE"].astype(int)
 
 
-def update_slice_df():
-    if st.session_state["edit_slice_df"]["edited_rows"]:
-        st.session_state.tmp_df = pd.DataFrame.from_dict(
-            st.session_state["edit_slice_df"]["edited_rows"], orient="index"
-        )
-        st.session_state.edit_df.loc[
-            st.session_state.tmp_df.index, st.session_state.tmp_df.columns
-        ] = st.session_state.tmp_df.copy()
-        update_time = int(round(datetime.now().timestamp()))
-        st.session_state.edit_df.loc[
-            st.session_state["edit_slice_df"]["edited_rows"].keys(), "LATEST_UPDATE"
-        ] = update_time
-        # st.session_state.edit_df["LATEST_UPDATE"] = st.session_state.edit_df["LATEST_UPDATE"].astype(int)
-
-
-# IMPORTANT TIME CONSTRUCTS
+# IMPORTANT TIME CONSTRUCTS AND SETUP
+num_rows_display = 20
 now = datetime.now()
 this_month_str = now.strftime("%m/%Y")
 start_of_month = datetime(now.year, now.month, 1)
@@ -98,36 +98,18 @@ two_months_ago = datetime.combine(
 
 # INITIALIZE SESSION STATE VARIABLES
 if "data_path" not in st.session_state:
-    data_path = sys.argv[-1]
-    df_path = (
-        Path(data_path)
-        .joinpath(config.get("MASTER_DF_FILENAME", MASTER_DF_FILENAME))
-        .resolve()
-        .as_posix()
-    )
-    if not Path(df_path).exists():
-        if Path(data_path).exists():
-            df = load_master_transaction_df(data_path)
-            if not isinstance(df, pd.DataFrame):
-                raise FileNotFoundError(
-                    f"There is no master transaction jsonl in your data dir ('{config.get('MASTER_DF_FILENAME', MASTER_DF_FILENAME)}').\n\nMake sure there is a rocket money transaciton csv in the data dir and try `bmoney update {data_path}` before launching the bmoney app again."
-                )
-        else:
-            raise FileNotFoundError(f"The data path: '{data_path}' does not exist!")
-    st.session_state.data_path = data_path
-    st.session_state.df_path = df_path
-    st.session_state.df_backup_path = Path(data_path).joinpath(
-        f"backup_{config.get('MASTER_DF_FILENAME', MASTER_DF_FILENAME)}"
-    )
+    st.session_state.data_path = data_dir
+
 if "df" not in st.session_state:
-    df = pd.read_json(df_path, orient="records", lines=True)
+    df = load_master_transaction_df(st.session_state.data_path, verbose=False)
     df["Date"] = pd.to_datetime(df["Date"])
     df["Note"] = df["Note"].astype(str)
+    df = df.reset_index(drop=True)
     st.session_state.df = df
 if "edit_df" not in st.session_state:
-    st.session_state.edit_df = df.copy()
+    st.session_state.edit_df = st.session_state.df.copy()
 if "session_df" not in st.session_state:
-    st.session_state.session_df = df.copy()
+    st.session_state.session_df = st.session_state.df.copy()
 # if "edit_all_df" not in st.session_state:
 #     st.session_state.edit_all_df = st.session_state.edit_df.copy()
 # if "edit_slice_df" not in st.session_state:
@@ -174,7 +156,7 @@ tab1, tab2 = st.tabs(["📈 Mission Control", "🗃 Data Editor"])
 with tab1:
     num_cols = len(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
     st.subheader(
-        f"Last 30 days Dashboard ({datetime.now().strftime('%m/%d')} - {(datetime.now() - timedelta(days=30)).strftime('%m/%d')})"
+        f"Last 30 days Dashboard ({(datetime.now() - timedelta(days=30)).strftime('%m/%d')} - {datetime.now().strftime('%m/%d')})"
     )
     columns = st.columns(num_cols)
     last_30_df, start, end = last_30_cat_spend(st.session_state.df)
@@ -192,89 +174,83 @@ with tab1:
                 )
             col += 1
 
+    if config.get("CUSTOM_WIDGETS"):
+        custom_num_cols = len(config.get("CUSTOM_WIDGETS"))
+        custom_num_cols = max(custom_num_cols, 5)
+        st.subheader("Custom Widgets")
+        custom_columns = st.columns(custom_num_cols)
+        cols = 0
+        for widget in config.get("CUSTOM_WIDGETS"):
+            with custom_columns[cols]:
+                widget_data = cached_run_custom_script(
+                    script_path=widget.get("script_path"),
+                    function_name=widget.get("function_name"),
+                    *widget.get("args"),
+                    **widget.get("kwargs"),
+                )
+                if widget.get("type") == "metric":
+                    if widget_data.get("delta"):
+                        st.metric(
+                            label=widget_data.get("title"),
+                            value=widget_data.get("value"),
+                            delta=f"{widget_data.get('delta')}%",
+                            border=True,
+                        )
+                    else:
+                        st.metric(
+                            label=widget_data.get("title"),
+                            value=widget_data.get("value"),
+                            border=True,
+                        )
+            cols += 1
+
 # data editor view
 with tab2:
     st.header("Data Editor")
-    if st.button("Sync data to gsheets"):
-        gsheet_df = load_master_transaction_df(
-            st.session_state.data_path, validate=False
-        )
-        if not gsheet_df.equals(st.session_state.session_df):
-            st.toast(
-                "WARNING: You have unsaved changes in the data editor that were included in the gsheets sync. Please consider saving changes."
-            )
-        response = gclient.sync_sheet(
-            gsheet_df,
-            sheet_name=config.get("GSHEETS_CONFIG").get("SPREADSHEET_TAB_NAME")
-            or os.getenv("SPREADSHEET_TAB_NAME"),
-        )
-        if response["status"] == 1:
-            st.toast("Sync successful!", icon="👌")
-        else:
-            st.toast(f"Sync failed!\n\n{response['message']}", icon="❌")
-    st.divider()
-
     col1, col2, col3 = st.columns([0.15, 0.15, 0.7])
     with col1:
-        if "show_more_text" not in st.session_state:
-            st.session_state.show_more_text = "show more"
-        st.button(st.session_state.show_more_text, on_click=change_text)
-    with col2:
         st.button("Save changes to local master file", on_click=save_df)
+    with col2:
+        if st.button("Sync data to gsheets"):
+            gsheet_df = load_master_transaction_df(
+                st.session_state.data_path, validate=False, verbose=False
+            )
+            if not gsheet_df.equals(st.session_state.session_df):
+                st.toast(
+                    "WARNING: You have unsaved changes in the data editor that were included in the gsheets sync. Please consider saving changes."
+                )
+            response = gclient.sync_all_sheets(gsheet_df)
+            if response["status"] == 1:
+                st.toast("Sync successful!", icon="👌")
+            else:
+                st.toast(f"Sync failed!\n\n{response['message']}", icon="❌")
 
-    if st.session_state.show_more_text == "show less":  # show full dataframe
-        st.data_editor(
-            st.session_state.session_df[config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)],
-            column_config={
-                "SHARED": st.column_config.CheckboxColumn("SHARED", pinned=True),
-                "CUSTOM_CAT": st.column_config.SelectboxColumn(
-                    "CUSTOM_CAT",
-                    options=list(
-                        set(config.get("CAT_MAP", CAT_MAP).values()).union(
-                            set(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
-                        )
-                    ),
-                    required=True,
-                    pinned=True,
+    st.divider()
+
+    st.data_editor(
+        st.session_state.session_df[config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)],
+        column_config={
+            "SHARED": st.column_config.CheckboxColumn("SHARED", pinned=True),
+            "CUSTOM_CAT": st.column_config.SelectboxColumn(
+                "CUSTOM_CAT",
+                options=list(
+                    set(config.get("CAT_MAP", CAT_MAP).values()).union(
+                        set(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
+                    )
                 ),
-                "Category": st.column_config.SelectboxColumn(
-                    "Category",
-                    options=list(set(config.get("CAT_MAP", CAT_MAP).keys())),
-                    required=True,
-                ),
-                "Note": st.column_config.TextColumn("Note"),
-                "Date": None,
-            },
-            hide_index=True,
-            key="edit_all_df",
-            on_change=update_all_df,
-        )
-    else:  # show slice of dataframe
-        st.data_editor(
-            st.session_state.session_df[
-                st.session_state.session_df["Date"] >= two_months_ago
-            ][config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)],
-            column_config={
-                "SHARED": st.column_config.CheckboxColumn("SHARED", pinned=True),
-                "CUSTOM_CAT": st.column_config.SelectboxColumn(
-                    "CUSTOM_CAT",
-                    options=list(
-                        set(config.get("CAT_MAP", CAT_MAP).values()).union(
-                            set(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
-                        )
-                    ),
-                    required=True,
-                    pinned=True,
-                ),
-                "Category": st.column_config.SelectboxColumn(
-                    "Category",
-                    options=list(set(config.get("CAT_MAP", CAT_MAP).keys())),
-                    required=True,
-                ),
-                "Note": st.column_config.TextColumn("Note"),
-                "Date": None,
-            },
-            hide_index=True,
-            key="edit_slice_df",
-            on_change=update_slice_df,
-        )
+                required=True,
+                pinned=True,
+            ),
+            "Category": st.column_config.SelectboxColumn(
+                "Category",
+                options=list(set(config.get("CAT_MAP", CAT_MAP).keys())),
+                required=True,
+            ),
+            "Note": st.column_config.TextColumn("Note"),
+            "Date": None,
+        },
+        hide_index=True,
+        height=(num_rows_display + 1) * 35 + 3,
+        key="edit_all_df",
+        on_change=update_all_df,
+    )
