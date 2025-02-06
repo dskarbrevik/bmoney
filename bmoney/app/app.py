@@ -118,12 +118,15 @@ if "session_df" not in st.session_state:
 #     ].copy()
 
 # google spreadsheets client init
-gclient = GSheetsClient(
-    sheet_id=config.get("GSHEETS_CONFIG").get("SPREADSHEET_ID")
-    or os.getenv("SPREADSHEET_ID"),
-    sa_cred_path=config.get("GSHEETS_CONFIG").get("GCP_SERVICE_ACCOUNT_PATH")
-    or os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
-)
+try:
+    gclient = GSheetsClient(
+        sheet_id=config.get("GSHEETS_CONFIG").get("SPREADSHEET_ID")
+        or os.getenv("SPREADSHEET_ID"),
+        sa_cred_path=config.get("GSHEETS_CONFIG").get("GCP_SERVICE_ACCOUNT_PATH")
+        or os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
+    )
+except Exception:
+    st.warning("Google Sheets client failed to initialize.")
 
 
 st.set_page_config(
