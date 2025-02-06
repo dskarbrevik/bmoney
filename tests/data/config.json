@@ -1,0 +1,66 @@
+{
+    "CONFIG_VERSION": "0.3.0",
+    "BUDGET_MONEY_USER": "Bunny",
+    "MASTER_DF_FILENAME": "BUDGET_MONEY_TRANSACTIONS.jsonl",
+    "SHARED_EXPENSES": [
+        "FOOD",
+        "SERVICES",
+        "TRAVEL",
+        "CAR",
+        "PET",
+        "RENT",
+        "ENTERTAINMENT",
+        "HOUSEHOLD"
+    ],
+    "SHARED_NOTE_MSG": "shared",
+    "NOT_SHARED_NOTE_MSG": "not shared",
+    "CAT_MAP": {
+        "Groceries": "FOOD",
+        "Auto & Transport": "CAR",
+        "Dining & Drinks": "FOOD",
+        "Credit Card Payment": "BANK TRANS",
+        "Uncategorized": "UNKNOWN",
+        "Shopping": "OTHER",
+        "Income": "INCOME",
+        "Bills & Utilities": "SERVICES",
+        "Entertainment & Rec.": "ENTERTAINMENT",
+        "Internal Transfers": "BANK TRANS",
+        "Pets": "PET",
+        "Investment": "BANK TRANS",
+        "Software & Tech": "OTHER",
+        "Travel & Vacation": "TRAVEL",
+        "Health & Wellness": "OTHER",
+        "Personal Care": "OTHER",
+        "Loan Payment": "OTHER",
+        "Medical": "OTHER",
+        "Home & Garden": "HOUSEHOLD",
+        "Gifts": "OTHER",
+        "Fees": "OTHER",
+        "Family Care": "OTHER",
+        "Education": "OTHER",
+        "Charitable Donations": "OTHER",
+        "Cash & Checks": "OTHER",
+        "Business": "OTHER"
+    },
+    "DATA_VIEW_COLS": [
+        "Date",
+        "Original Date",
+        "Name",
+        "Amount",
+        "Category",
+        "CUSTOM_CAT",
+        "SHARED",
+        "Note",
+        "Institution Name",
+        "Account Name"
+    ],
+    "GSHEETS_CONFIG": {
+        "SPREADSHEET_ID": "",
+        "SPREADSHEET_TABS": {
+            "TRANSACTIONS": "",
+            "CATEGORIES": ""
+        },
+        "GCP_SERVICE_ACCOUNT_PATH": ""
+    },
+    "CUSTOM_WIDGETS": []
+}

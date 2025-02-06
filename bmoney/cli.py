@@ -135,16 +135,8 @@ def gsheets_sync(data_dir: str = "."):
         sheet_id=spreadsheet_id,
         sa_cred_path=gcp_service_account_path,
     )
-    sheet_name = config.get("GSHEETS_CONFIG").get("SPREADSHEET_TABS").get("CATEGORIES")
-    if not sheet_name:
-        print(
-            "ERROR: Your config.json file is missing a 'CATEGORY_TOTAL_TAB_NAME' value in the 'GSHEETS_CONFIG' section."
-        )
-    response = gs_client.sync_sheet(df=df, sheet_name=sheet_name)
-    if response["status"] == 1:
-        print("Successfully synced gsheet!")
-    else:
-        print(f"Sync Error!\n{response['message']}")
+    response = gs_client.sync_all_sheets(df)
+    print(response["message"])
 
 
 if __name__ == "__main__":

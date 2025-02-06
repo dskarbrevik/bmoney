@@ -5,7 +5,10 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-from bmoney.utils.data import monthly_gsheets_cost_table
+from bmoney.utils.data import monthly_gsheets_cost_table, transactions_gsheet_table
+from bmoney.utils.data import load_config_file
+from bmoney.constants import DEFAULT_CONFIG
+
 
 from pathlib import Path
 import pandas as pd
@@ -35,6 +38,8 @@ class GSheetsClient:
         self.oauth_secret_path = oauth_secret_path
         self._authenticate()
         self.service = build("sheets", "v4", credentials=self.creds)
+        self.config = load_config_file()
+        self.gsheets_config = self.config.get("GSHEETS_CONFIG")
 
     def _reauth(self):
         if not self.creds or not self.creds.valid:
@@ -127,7 +132,7 @@ class GSheetsClient:
 
         return f"{result.get('updatedCells')} cells updated."
 
-    def sync_sheet(self, df: pd.DataFrame, sheet_name: str) -> dict:
+    def sync_category_sheet(self, df: pd.DataFrame, sheet_name: str) -> dict:
         """Takes a transaction dataframe and gsheet range to ensure the sheet is up to date with the dataframe.
 
         Args:
@@ -141,7 +146,10 @@ class GSheetsClient:
         try:
             # get data for gsheets from master transaction
             values = monthly_gsheets_cost_table(
-                df, only_shared=True, return_values=True
+                df, 
+                only_shared=True, 
+                return_values=True,
+                start_date=self.gsheets_config.get("START_DATE"),
             )
             end_range = df.shape[1]
             sheet_range = f"{sheet_name}!A:{chr(64 + end_range)}"
@@ -165,3 +173,72 @@ class GSheetsClient:
             return {"status": 1, "message": response}
         except Exception as e:
             return {"status": 0, "message": e}
+        
+
+    def sync_transaction_sheet(self, df: pd.DataFrame, sheet_name: str) -> dict:
+        """Takes a category dataframe and gsheet range to ensure the sheet is up to date with the dataframe.
+
+        Args:
+            df (pd.DataFrame): category dataframe
+            sheet_name (str): name of the tab/sheet in your spreadsheet
+
+        Returns:
+            dict: keys - "status","message"
+        """
+
+        try:
+            values = transactions_gsheet_table(df, 
+                                               only_shared=True, 
+                                               start_date=self.gsheets_config.get("START_DATE"),
+                                               return_values=True)
+            end_range = df.shape[1]
+            sheet_range = f"{sheet_name}!A:{chr(64 + end_range)}"
+
+            self.clear_data(sheet_range=sheet_range)
+            response = self.update_data(sheet_range=sheet_range, values=values)
+            return {"status": 1, "message": response}
+        except Exception as e:
+            return {"status": 0, "message": e}
+
+    def sync_sheet(self, df: pd.DataFrame, data_type: str, sheet_name: str) -> dict:
+        """
+        Args:
+            df (pd.DataFrame): transaction dataframe
+            data_type: type of data to sync - "transactions" or "categories"
+            sheet_name (str): name of the tab/sheet in your spreadsheet
+
+        Returns:
+            dict: keys - "status","message"
+        """
+        if data_type=="transactions":
+            return self.sync_transaction_sheet(df, sheet_name)
+        elif data_type=="categories":
+            return self.sync_category_sheet(df, sheet_name)
+        else:
+            return {"status": 0, "message": "Invalid data type. Must be 'transactions' or 'categories'."}
+        
+    def sync_all_sheets(self, df: pd.DataFrame) -> dict:
+        
+        tabs_to_sync = []
+        if self.gsheets_config:
+            spreadsheet_tabs = self.gsheets_config.get("SPREADSHEET_TABS")
+            if spreadsheet_tabs:
+                for tab in DEFAULT_CONFIG.get("GSHEETS_CONFIG").get("SPREADSHEET_TABS").keys():
+                    if tab in spreadsheet_tabs.keys():
+                        tabs_to_sync.append(tab)
+        if not tabs_to_sync:
+            print(
+                "Gsheet sync skipped... your config.json does not have any SPREADSHEET_TABS named for syncing."
+            )
+            return
+        responses = []
+        for tab in tabs_to_sync:
+            sheet_name = self.gsheets_config.get("SPREADSHEET_TABS").get(tab)
+            response = self.sync_sheet(df=df, data_type=tab.lower(), sheet_name=sheet_name)
+            responses.append(response)
+            if response["status"] != 1:
+                print(f"Sync Error!\n{response['message']}")
+        if all([True for response in responses if response["status"]==1]):
+            return {"status": 1, "message": "Successfully synced all gsheets!"}
+        else:
+            return {"status": 0, "message": "Failed to sync all gsheets!"}

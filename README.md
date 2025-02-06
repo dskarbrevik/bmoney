@@ -7,12 +7,12 @@ Budget Money (bmoney) is a budgeting tool that builds on top of Rocket Money tra
 Rocket Money allows users to export their financial transactions to a CSV file. Rocket Money (through their partnered service Plaid) provide transactions up to two years ago.
 
 Budget Money (this tool) builds ontop of these CSVs:
-- Merge multiple Rocket Money CSV export files into one highly portable JSONL file
-- In browser app (streamlit)
+- Merge your Rocket Money CSV exports into one highly portable master file
+- Easily edit transaction data in your master file (through a locally deployed webapp)
     - Display and easily edit all your data
     - Custom Metrics and visualization dashboard to see category spending habit in more detail
 - Map Rocket Money categories to your own custom categories
-- Export shared transaction and category spend data to Google Sheets to
+- Export shared transactions to Google Sheets to make sharing finances with roommates/partners easier
 
 ## Installation
 
@@ -30,6 +30,9 @@ You should see a a config.json and jsonl transaction file in your folder now.
 
 3) `bmoney launch` to see the budget money dashboard with your data.
 
+![bmoney app homepage](assets/images/bmoney_app1.png)
+
+![bmoney app data editor](assets/images/bmoney_app2.png)
 
 ## CLI command quickstart
 
@@ -63,6 +66,7 @@ More about the GSHEETS_CONFIG dict:
 | --- | ---| --- | --- |
 | SPREADSHEET_ID | `str` | The ID of your Google Sheet file | |
 | SPREADSHEET_TABS | `dict` | key:val pairs for different bmoney->gsheets capabilities | Leave a Tab val as "" if you don't want to use that capability. |
+| START_DATE | `str` | Optional date (`format="%m/%d/%Y"`; e.g. `"01/31/2024"`) to filter transactions that are sent to gsheets. | This can be useful if your transactions go back further in time than your use of Google Sheets as a budgeting tool. |
 | GCP_SERVICE_ACCOUNT_PATH | `str` | The path to a json file containing GCP provided service account credentials. | See [here](https://support.google.com/a/answer/7378726?hl=en) for info on how to setup a GCP Service Account with Google Sheets access. |
 
 
