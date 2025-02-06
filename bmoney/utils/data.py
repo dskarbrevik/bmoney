@@ -3,7 +3,10 @@ from bmoney.constants import MASTER_DF_FILENAME
 from pathlib import Path
 from datetime import timedelta, datetime
 from bmoney.constants import (
-    CAT_MAP, SHARED_EXPENSES, SHARED_NOTE_MSG, NOT_SHARED_NOTE_MSG
+    CAT_MAP,
+    SHARED_EXPENSES,
+    SHARED_NOTE_MSG,
+    NOT_SHARED_NOTE_MSG,
 )
 from bmoney.utils.config import load_config_file
 import pandas as pd
@@ -40,10 +43,11 @@ def has_csv_files(data_path: str) -> bool:
     else:
         raise Exception(f"Path '{data_path}' is not a directory.")
 
-def backup_master_transaction_df(data_path: str, df: pd.DataFrame = None, verbose: bool = False) -> None:
-    master_backup_folder = Path(data_path).joinpath(
-                "BACKUPS"
-            )
+
+def backup_master_transaction_df(
+    data_path: str, df: pd.DataFrame = None, verbose: bool = False
+) -> None:
+    master_backup_folder = Path(data_path).joinpath("BACKUPS")
     if not master_backup_folder.exists():
         print(f"{master_backup_folder.resolve()} does not exist. Creating...")
         master_backup_folder.resolve().mkdir()
@@ -54,10 +58,9 @@ def backup_master_transaction_df(data_path: str, df: pd.DataFrame = None, verbos
         print(f"Backing up master at: {master_backup_path}")
     df.to_json(master_backup_path, orient="records", lines=True)
 
+
 def load_master_transaction_df(
-    data_path: str,
-    validate: bool = False,
-    verbose: bool = True
+    data_path: str, validate: bool = False, verbose: bool = True
 ) -> None:
     """Updates the master jsonl with any csvs in the data_path
 
@@ -84,6 +87,7 @@ def load_master_transaction_df(
         print(f"No master file detected. Make sure it is named {MASTER_DF_FILENAME}")
         return None
 
+
 def save_master_transaction_df(data_path: str, df: pd.DataFrame, verbose=False) -> None:
     """Saves a transaction dataframe to disk
 
@@ -93,7 +97,9 @@ def save_master_transaction_df(data_path: str, df: pd.DataFrame, verbose=False) 
     """
     master_save_path = Path(data_path).joinpath(f"{MASTER_DF_FILENAME}")
     if verbose:
-        print(f"Saving new master transaction df to: {master_save_path.resolve().as_posix()}")
+        print(
+            f"Saving new master transaction df to: {master_save_path.resolve().as_posix()}"
+        )
     df.to_json(master_save_path.resolve().as_posix(), orient="records", lines=True)
 
 
@@ -128,7 +134,7 @@ def update_master_transaction_df(
             start_date = df["Date"].max() + timedelta(days=1)
             old_master_rows = df.shape[0]
             print(
-                f"Old master transaction data ends on {df['Date'].max().strftime("%m/%d/%Y")} and has num rows: {old_master_rows}"
+                f"Old master transaction data ends on {df['Date'].max().strftime('%m/%d/%Y')} and has num rows: {old_master_rows}"
             )
             backup_master_transaction_df(data_path, df)
         for file in files:
@@ -175,6 +181,7 @@ def apply_transformations(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
 def apply_uuid(df: pd.DataFrame) -> pd.DataFrame:
     """Adds a column called UUID to the transaction dataframe
 
@@ -188,7 +195,9 @@ def apply_uuid(df: pd.DataFrame) -> pd.DataFrame:
         bmoney_ids = [str(uuid.uuid4()) for _ in range(df.shape[0])]
         df["BMONEY_TRANS_ID"] = bmoney_ids
     else:
-        df["BMONEY_TRANS_ID"] = df["BMONEY_TRANS_ID"].apply(lambda x: x if pd.notna(x) else str(uuid.uuid4()))
+        df["BMONEY_TRANS_ID"] = df["BMONEY_TRANS_ID"].apply(
+            lambda x: x if pd.notna(x) else str(uuid.uuid4())
+        )
     return df
 
 
@@ -207,13 +216,19 @@ def apply_note_check(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[df["Note"].isin(["nan", "None"]), "Note"] = ""
 
     df.loc[
-        df["Note"].str.lower().str.strip().str.contains(config.get("SHARED_NOTE_MSG", SHARED_NOTE_MSG)),
-        "SHARED"
+        df["Note"]
+        .str.lower()
+        .str.strip()
+        .str.contains(config.get("SHARED_NOTE_MSG", SHARED_NOTE_MSG)),
+        "SHARED",
     ] = True
 
     df.loc[
-        df["Note"].str.lower().str.strip().str.contains(config.get("NOT_SHARED_NOTE_MSG", NOT_SHARED_NOTE_MSG)),
-        "SHARED"
+        df["Note"]
+        .str.lower()
+        .str.strip()
+        .str.contains(config.get("NOT_SHARED_NOTE_MSG", NOT_SHARED_NOTE_MSG)),
+        "SHARED",
     ] = False
 
     return df
@@ -345,10 +360,10 @@ def apply_year(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def monthly_gsheets_cost_table(
-    df: pd.DataFrame, 
-    only_shared: bool = False, 
+    df: pd.DataFrame,
+    only_shared: bool = False,
     return_values: bool = False,
-    start_date: str = None
+    start_date: str = None,
 ) -> pd.DataFrame:
     """Calculates total category spend per month
 
@@ -401,10 +416,10 @@ def monthly_gsheets_cost_table(
 
 
 def transactions_gsheet_table(
-    df: pd.DataFrame, 
-    only_shared: bool = False, 
+    df: pd.DataFrame,
+    only_shared: bool = False,
     return_values: bool = False,
-    start_date: str = None
+    start_date: str = None,
 ) -> pd.DataFrame:
     """Returns a table of transactions for gsheets
 
@@ -425,7 +440,7 @@ def transactions_gsheet_table(
         # ]
 
     df = df[["Date", "Name", "Amount", "CUSTOM_CAT", "Note"]]
-    df = df.rename(columns={"CUSTOM_CAT":"Category"})
+    df = df.rename(columns={"CUSTOM_CAT": "Category"})
     df["Date"] = pd.to_datetime(df["Date"])
     if start_date:
         df = df[df["Date"] >= start_date]

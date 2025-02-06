@@ -146,8 +146,8 @@ class GSheetsClient:
         try:
             # get data for gsheets from master transaction
             values = monthly_gsheets_cost_table(
-                df, 
-                only_shared=True, 
+                df,
+                only_shared=True,
                 return_values=True,
                 start_date=self.gsheets_config.get("START_DATE"),
             )
@@ -173,7 +173,6 @@ class GSheetsClient:
             return {"status": 1, "message": response}
         except Exception as e:
             return {"status": 0, "message": e}
-        
 
     def sync_transaction_sheet(self, df: pd.DataFrame, sheet_name: str) -> dict:
         """Takes a category dataframe and gsheet range to ensure the sheet is up to date with the dataframe.
@@ -187,10 +186,12 @@ class GSheetsClient:
         """
 
         try:
-            values = transactions_gsheet_table(df, 
-                                               only_shared=True, 
-                                               start_date=self.gsheets_config.get("START_DATE"),
-                                               return_values=True)
+            values = transactions_gsheet_table(
+                df,
+                only_shared=True,
+                start_date=self.gsheets_config.get("START_DATE"),
+                return_values=True,
+            )
             end_range = df.shape[1]
             sheet_range = f"{sheet_name}!A:{chr(64 + end_range)}"
 
@@ -210,20 +211,24 @@ class GSheetsClient:
         Returns:
             dict: keys - "status","message"
         """
-        if data_type=="transactions":
+        if data_type == "transactions":
             return self.sync_transaction_sheet(df, sheet_name)
-        elif data_type=="categories":
+        elif data_type == "categories":
             return self.sync_category_sheet(df, sheet_name)
         else:
-            return {"status": 0, "message": "Invalid data type. Must be 'transactions' or 'categories'."}
-        
+            return {
+                "status": 0,
+                "message": "Invalid data type. Must be 'transactions' or 'categories'.",
+            }
+
     def sync_all_sheets(self, df: pd.DataFrame) -> dict:
-        
         tabs_to_sync = []
         if self.gsheets_config:
             spreadsheet_tabs = self.gsheets_config.get("SPREADSHEET_TABS")
             if spreadsheet_tabs:
-                for tab in DEFAULT_CONFIG.get("GSHEETS_CONFIG").get("SPREADSHEET_TABS").keys():
+                for tab in (
+                    DEFAULT_CONFIG.get("GSHEETS_CONFIG").get("SPREADSHEET_TABS").keys()
+                ):
                     if tab in spreadsheet_tabs.keys():
                         tabs_to_sync.append(tab)
         if not tabs_to_sync:
@@ -234,11 +239,13 @@ class GSheetsClient:
         responses = []
         for tab in tabs_to_sync:
             sheet_name = self.gsheets_config.get("SPREADSHEET_TABS").get(tab)
-            response = self.sync_sheet(df=df, data_type=tab.lower(), sheet_name=sheet_name)
+            response = self.sync_sheet(
+                df=df, data_type=tab.lower(), sheet_name=sheet_name
+            )
             responses.append(response)
             if response["status"] != 1:
                 print(f"Sync Error!\n{response['message']}")
-        if all([True for response in responses if response["status"]==1]):
+        if all([True for response in responses if response["status"] == 1]):
             return {"status": 1, "message": "Successfully synced all gsheets!"}
         else:
             return {"status": 0, "message": "Failed to sync all gsheets!"}

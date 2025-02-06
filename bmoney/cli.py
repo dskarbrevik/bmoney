@@ -11,7 +11,7 @@ from bmoney.utils.data import (
 from bmoney.utils.gcloud import GSheetsClient
 from bmoney.utils.config import (
     create_config_file,
-    load_config_file, 
+    load_config_file,
     save_config_file,
     update_config_file,
 )
@@ -53,7 +53,9 @@ def app_init(
     if not config_path_json.exists():
         create_config_file(path=path)
     elif not force:
-        raise Exception("This looks like an active project dir. Config file already exists... use --force to overwrite.")
+        raise Exception(
+            "This looks like an active project dir. Config file already exists... use --force to overwrite."
+        )
     else:
         print("Config found, but force flag used... updating config file.")
 
@@ -99,10 +101,9 @@ def db_update(
     response = update_master_transaction_df(data_dir, return_df=False, return_msg=True)
     print(response)
 
+
 @config_app.command("update")
-def config_update(
-    data_dir: str = "."
-):
+def config_update(data_dir: str = "."):
     config = load_config_file()
     update_config_file(config=config, path=data_dir)
 
