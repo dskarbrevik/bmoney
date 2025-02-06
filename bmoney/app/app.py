@@ -27,6 +27,15 @@ load_dotenv()  # get env vars
 data_dir = sys.argv[-1]
 config = load_config_file(data_dir)  # get user config
 
+st.set_page_config(
+    page_title="Budget Money",
+    page_icon="\U0001f680",
+    layout="wide",
+    menu_items={
+        "About": None,
+        "Report a bug": "https://github.com/dskarbrevik/bmoney/issues",
+    },
+)
 
 @st.cache_data
 def cached_run_custom_script(script_path, function_name, *args, **kwargs):
@@ -126,18 +135,9 @@ try:
         or os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
     )
 except Exception:
-    st.warning("Google Sheets client failed to initialize.")
+    gclient = None
+    # st.warning("Google Sheets client failed to initialize.")
 
-
-st.set_page_config(
-    page_title="Budget Money",
-    page_icon="\U0001f680",
-    layout="wide",
-    menu_items={
-        "About": None,
-        "Report a bug": "https://github.com/dskarbrevik/bmoney/issues",
-    },
-)
 # st.config.set_option('client.toolbarMode', 'viewer')
 # Main app setup
 st.markdown(
@@ -215,18 +215,21 @@ with tab2:
         st.button("Save changes to local master file", on_click=save_df)
     with col2:
         if st.button("Sync data to gsheets"):
-            gsheet_df = load_master_transaction_df(
-                st.session_state.data_path, validate=False, verbose=False
-            )
-            if not gsheet_df.equals(st.session_state.session_df):
-                st.toast(
-                    "WARNING: You have unsaved changes in the data editor that were included in the gsheets sync. Please consider saving changes."
-                )
-            response = gclient.sync_all_sheets(gsheet_df)
-            if response["status"] == 1:
-                st.toast("Sync successful!", icon="👌")
+            if not gclient:
+                st.warning("Google Sheets client failed to initialize.")
             else:
-                st.toast(f"Sync failed!\n\n{response['message']}", icon="❌")
+                gsheet_df = load_master_transaction_df(
+                    st.session_state.data_path, validate=False, verbose=False
+                )
+                if not gsheet_df.equals(st.session_state.session_df):
+                    st.toast(
+                        "WARNING: You have unsaved changes in the data editor that were included in the gsheets sync. Please consider saving changes."
+                    )
+                response = gclient.sync_all_sheets(gsheet_df)
+                if response["status"] == 1:
+                    st.toast("Sync successful!", icon="👌")
+                else:
+                    st.toast(f"Sync failed!\n\n{response['message']}", icon="❌")
 
     st.divider()
 
