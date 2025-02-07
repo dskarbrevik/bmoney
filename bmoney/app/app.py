@@ -81,14 +81,11 @@ def update_all_df():
         tmp_df = pd.DataFrame.from_dict(
             st.session_state["edit_all_df"]["edited_rows"], orient="index"
         )
-        print(tmp_df.index)
-        print(st.session_state.session_df.iloc[tmp_df.index]["Name"])
         st.session_state.edit_df.loc[tmp_df.index, tmp_df.columns] = tmp_df.copy()
         update_time = int(round(datetime.now().timestamp()))
         st.session_state.edit_df.loc[
             st.session_state["edit_all_df"]["edited_rows"].keys(), "LATEST_UPDATE"
         ] = update_time
-        # st.session_state.edit_df["LATEST_UPDATE"] = st.session_state.edit_df["LATEST_UPDATE"].astype(int)
 
 
 # IMPORTANT TIME CONSTRUCTS AND SETUP
@@ -218,11 +215,11 @@ with tab2:
             if not gclient:
                 st.warning("Google Sheets client failed to initialize.")
             else:
-                if not st.session_state.df.equals(st.session_state.session_df):
+                if not st.session_state.df.equals(st.session_state.edit_df):
                     st.toast(
-                        "WARNING: You have unsaved changes in the data editor that were included in the gsheets sync. Please consider saving changes."
+                        "WARNING: You have unsaved changes in the data editor that were included in the gsheets sync. Consider saving changes."
                     )
-                response = gclient.sync_all_sheets(st.session_state.df)
+                response = gclient.sync_all_sheets(st.session_state.edit_df)
                 if response["status"] == 1:
                     st.toast("Sync successful!", icon="👌")
                 else:

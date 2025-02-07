@@ -245,6 +245,8 @@ class GSheetsClient:
             responses.append(response)
             if response["status"] != 1:
                 print(f"Sync Error!\n{response['message']}")
+        if not responses:
+            return {"status": 0, "message": "No gsheets to sync!"}
         if all([True for response in responses if response["status"] == 1]):
             return {"status": 1, "message": "Successfully synced all gsheets!"}
         else:
