@@ -37,6 +37,7 @@ st.set_page_config(
     },
 )
 
+
 @st.cache_data
 def cached_run_custom_script(script_path, function_name, *args, **kwargs):
     """Caches the result of the expensive function."""
