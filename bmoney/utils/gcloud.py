@@ -235,10 +235,15 @@ class GSheetsClient:
             print(
                 "Gsheet sync skipped... your config.json does not have any SPREADSHEET_TABS named for syncing."
             )
-            return
+            return {"status": 0, "message": "No gsheets to sync!"}
         responses = []
         for tab in tabs_to_sync:
             sheet_name = self.gsheets_config.get("SPREADSHEET_TABS").get(tab)
+            if not sheet_name:
+                print(
+                    f"Skipping {tab} sync... your config.json does not have a SPREADSHEET_TABS name for your {tab} entry."
+                )
+                continue
             response = self.sync_sheet(
                 df=df, data_type=tab.lower(), sheet_name=sheet_name
             )
