@@ -57,7 +57,7 @@ def save_df():
         backup_master_transaction_df(
             data_path=st.session_state.data_path, df=st.session_state.df
         )
-        print("in save_df")
+        st.session_state.df = st.session_state.edit_df.copy()
         # print(st.session_state.edit_df.iloc[1347])
         # st.session_state.edit_df = apply_transformations(st.session_state.edit_df)
         # print(st.session_state.edit_df.iloc[1347])
@@ -67,9 +67,6 @@ def save_df():
             verbose=True,
         )
         st.toast("Save successful!", icon="👌")
-        st.session_state.df = load_master_transaction_df(
-            st.session_state.data_path, validate=False, verbose=False
-        )
         # print(st.session_state.edit_df.iloc[224])
         # st.session_state.edit_df = st.session_state.df.copy()
         # print(st.session_state.edit_df.iloc[224])
@@ -113,6 +110,8 @@ if "df" not in st.session_state:
     df = load_master_transaction_df(st.session_state.data_path, verbose=False)
     df["Date"] = pd.to_datetime(df["Date"])
     df["Note"] = df["Note"].astype(str)
+    df["SHARED"] = df["SHARED"].astype(bool)
+
     df = df.reset_index(drop=True)
     st.session_state.df = df
 if "edit_df" not in st.session_state:
@@ -218,14 +217,11 @@ with tab2:
             if not gclient:
                 st.warning("Google Sheets client failed to initialize.")
             else:
-                gsheet_df = load_master_transaction_df(
-                    st.session_state.data_path, validate=False, verbose=False
-                )
-                if not gsheet_df.equals(st.session_state.session_df):
+                if not st.session_state.df.equals(st.session_state.session_df):
                     st.toast(
                         "WARNING: You have unsaved changes in the data editor that were included in the gsheets sync. Please consider saving changes."
                     )
-                response = gclient.sync_all_sheets(gsheet_df)
+                response = gclient.sync_all_sheets(st.session_state.df)
                 if response["status"] == 1:
                     st.toast("Sync successful!", icon="👌")
                 else:
