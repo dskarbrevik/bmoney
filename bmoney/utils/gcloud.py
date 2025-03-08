@@ -5,10 +5,13 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-from bmoney.utils.data import monthly_gsheets_cost_table, transactions_gsheet_table
-from bmoney.utils.data import load_config_file
+from bmoney.utils.data import (
+    monthly_gsheets_cost_table,
+    transactions_gsheet_table,
+    load_config_file,
+    apply_transformations,
+)
 from bmoney.constants import DEFAULT_CONFIG
-
 
 from pathlib import Path
 import pandas as pd
@@ -237,6 +240,7 @@ class GSheetsClient:
             )
             return {"status": 0, "message": "No gsheets to sync!"}
         responses = []
+        df = apply_transformations(df)
         for tab in tabs_to_sync:
             sheet_name = self.gsheets_config.get("SPREADSHEET_TABS").get(tab)
             if not sheet_name:
