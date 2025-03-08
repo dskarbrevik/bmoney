@@ -88,10 +88,9 @@ def load_master_transaction_df(
         return None
 
 
-def save_master_transaction_df(data_path: str, 
-                               df: pd.DataFrame, 
-                               verbose: bool=False,
-                               validate: bool=True) -> None:
+def save_master_transaction_df(
+    data_path: str, df: pd.DataFrame, verbose: bool = False, validate: bool = True
+) -> None:
     """Saves a transaction dataframe to disk
 
     Args:
