@@ -261,23 +261,27 @@ def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
     config = load_config_file()  # get user config
 
     def custom_cat(row):
+        # Determine if row was edited
         if isinstance(row["LATEST_UPDATE"], float):
             edited_check = not math.isnan(row["LATEST_UPDATE"])
         elif isinstance(row["LATEST_UPDATE"], np.ndarray):
             edited_check = not np.isnan(row["LATEST_UPDATE"])
         elif not row["LATEST_UPDATE"]:
             edited_check = False
+
+        # If edited, preserve CUSTOM_CAT and Category unless explicitly cleared
         if edited_check:
-            if not row["CUSTOM_CAT"]:
-                edited_check = False
-        if not edited_check:
-            #  if row["CUSTOM_CAT"]=="PET":
-            #     print(f"NOT EDITED: Category for {row['Name']} is: {row['CUSTOM_CAT']} ({row['LATEST_UPDATE']})")
-            return config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
-        else:
-            # if row["CUSTOM_CAT"]=="PET":
-            #     print(f"EDITED: Category for {row['Name']} is: {row['CUSTOM_CAT']} ({row['LATEST_UPDATE']})")
+            # If CUSTOM_CAT is empty but Category is set, use Category mapping
+            if not row["CUSTOM_CAT"] and row["Category"]:
+                return config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
+            # If both are empty, fallback to UNKNOWN
+            if not row["CUSTOM_CAT"] and not row["Category"]:
+                return "UNKNOWN"
+            # Otherwise, preserve CUSTOM_CAT
             return row["CUSTOM_CAT"]
+        else:
+            # Not edited: always map Category to CUSTOM_CAT
+            return config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
 
     df["CUSTOM_CAT"] = df.apply(custom_cat, axis=1)
 
