@@ -88,7 +88,9 @@ def load_master_transaction_df(
         return None
 
 
-def save_master_transaction_df(data_path: str, df: pd.DataFrame, verbose=False) -> None:
+def save_master_transaction_df(
+    data_path: str, df: pd.DataFrame, verbose: bool = False, validate: bool = True
+) -> None:
     """Saves a transaction dataframe to disk
 
     Args:
@@ -96,6 +98,8 @@ def save_master_transaction_df(data_path: str, df: pd.DataFrame, verbose=False) 
         df (pd.DataFrame): dataframe to save
     """
     master_save_path = Path(data_path).joinpath(f"{MASTER_DF_FILENAME}")
+    if validate:
+        df = apply_transformations(df)
     if verbose:
         print(
             f"Saving new master transaction df to: {master_save_path.resolve().as_posix()}"
@@ -214,7 +218,7 @@ def apply_note_check(df: pd.DataFrame) -> pd.DataFrame:
 
     df.loc[df["Note"].isnull(), "Note"] = ""
     df.loc[df["Note"].isin(["nan", "None"]), "Note"] = ""
-
+    df["SHARED"] = df["SHARED"].astype(bool)
     df.loc[
         df["Note"]
         .str.lower()
@@ -442,7 +446,6 @@ def transactions_gsheet_table(
         # df = df[
         #     df["CUSTOM_CAT"].isin(config.get("SHARED_EXPENSES", SHARED_EXPENSES))
         # ]
-
     df = df[["Date", "Name", "Amount", "CUSTOM_CAT", "Note"]]
     df = df.rename(columns={"CUSTOM_CAT": "Category"})
     df["Date"] = pd.to_datetime(df["Date"])
