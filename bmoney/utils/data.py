@@ -109,12 +109,12 @@ def save_master_transaction_df(
 
 
 def update_master_transaction_df(
-    data_path: str = ".", 
-    return_df: bool = True, 
+    data_path: str = ".",
+    return_df: bool = True,
     return_msg: bool = False,
     use_deduplication: bool = True,
     date_window: int = 7,
-    amount_tolerance: float = 0.50
+    amount_tolerance: float = 0.50,
 ) -> pd.DataFrame:
     """Adds new transactions to master transaction df.
     Returns new df, saves to disk and creates backup of old df.
@@ -148,16 +148,16 @@ def update_master_transaction_df(
                 f"Old master transaction data ends on {df['Date'].max().strftime('%m/%d/%Y')} and has num rows: {old_master_rows}"
             )
             backup_master_transaction_df(data_path, df)
-        
+
         # Load all new transactions from CSV files
         new_dfs = []
         for file in files:
             tmp_df = pd.read_csv(file)
             tmp_df["Date"] = pd.to_datetime(tmp_df["Date"])
             new_dfs.append(tmp_df)
-        
+
         new_df = pd.concat(new_dfs, ignore_index=True) if new_dfs else pd.DataFrame()
-        
+
         if use_deduplication and not new_df.empty:
             # Use intelligent deduplication instead of date-based filtering
             df, stats = merge_new_transactions(
@@ -165,10 +165,12 @@ def update_master_transaction_df(
                 new_df=new_df,
                 date_window=date_window,
                 amount_tolerance=amount_tolerance,
-                verbose=True
+                verbose=True,
             )
-            print(f"\nAdded {stats['transactions_added']} new unique transactions to master.")
-            if stats['removed_count'] > 0:
+            print(
+                f"\nAdded {stats['transactions_added']} new unique transactions to master."
+            )
+            if stats["removed_count"] > 0:
                 print(f"Removed {stats['removed_count']} duplicate transactions.")
         else:
             # Legacy behavior: date-based filtering
@@ -183,7 +185,7 @@ def update_master_transaction_df(
         if return_msg:
             return "No csv files found to update master df with..."
         return None
-    
+
     print("Applying validation checks and transformations...")
     df = apply_transformations(df)
     master_save_path = Path(data_path).joinpath(f"{MASTER_DF_FILENAME}")

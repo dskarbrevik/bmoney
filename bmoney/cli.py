@@ -116,20 +116,16 @@ def db_dedup(
     ] = 7,
     amount_tolerance: Annotated[
         float,
-        typer.Option(
-            help="Dollar amount tolerance for fuzzy matching (default: 0.50)"
-        ),
+        typer.Option(help="Dollar amount tolerance for fuzzy matching (default: 0.50)"),
     ] = 0.50,
     dry_run: Annotated[
         bool,
-        typer.Option(
-            help="Show what would be removed without making changes"
-        ),
+        typer.Option(help="Show what would be removed without making changes"),
     ] = False,
 ):
     """
     Deduplicate transactions in the master dataframe.
-    
+
     This command finds and removes duplicate transactions including:
     - Exact duplicates
     - Pending -> Posted transactions (with amount changes)
@@ -137,39 +133,39 @@ def db_dedup(
     """
     if not Path(data_dir).exists():
         raise Exception(f"The data dir: '{data_dir}' does not exist!")
-    
+
     print("Loading master transaction dataframe...")
     df = load_master_transaction_df(data_dir, validate=False, verbose=False)
-    
+
     if df is None or df.empty:
         print("No transactions found in master file.")
         return
-    
+
     original_count = len(df)
     print(f"Original transaction count: {original_count}")
     print("\nSearching for duplicates with:")
     print(f"  - Date window: {date_window} days")
     print(f"  - Amount tolerance: ${amount_tolerance}")
-    
+
     # Run deduplication
     df_clean, stats = deduplicate_transactions(
         df,
         date_window=date_window,
         amount_tolerance=amount_tolerance,
-        strategy='keep_latest',
-        verbose=True
+        strategy="keep_latest",
+        verbose=True,
     )
-    
-    if stats['removed_count'] == 0:
+
+    if stats["removed_count"] == 0:
         print("\n✅ No duplicates found! Your data is clean.")
         return
-    
+
     print(f"\n{'DRY RUN - ' if dry_run else ''}Results:")
     print(f"  - Duplicate groups found: {stats['duplicate_groups']}")
     print(f"  - Transactions in groups: {stats['transactions_in_groups']}")
     print(f"  - Duplicates to remove: {stats['removed_count']}")
     print(f"  - Final transaction count: {stats['final_count']}")
-    
+
     if dry_run:
         print("\n🔍 This was a dry run. No changes were made.")
         print("   Run without --dry-run to apply the deduplication.")
@@ -177,17 +173,16 @@ def db_dedup(
         # Backup before making changes
         print("\nCreating backup of master file...")
         backup_master_transaction_df(data_dir, df)
-        
+
         # Save the deduplicated dataframe
         print("Saving deduplicated master file...")
         save_master_transaction_df(
-            data_path=data_dir,
-            df=df_clean,
-            verbose=False,
-            validate=True
+            data_path=data_dir, df=df_clean, verbose=False, validate=True
         )
-        
-        print(f"\n✅ Deduplication complete! Removed {stats['removed_count']} duplicate transactions.")
+
+        print(
+            f"\n✅ Deduplication complete! Removed {stats['removed_count']} duplicate transactions."
+        )
         print(f"   Backup created in: {Path(data_dir) / 'BACKUPS'}")
 
 
