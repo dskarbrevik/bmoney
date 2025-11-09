@@ -56,15 +56,14 @@ def change_text():
 def save_df():
     # Check if there are deleted rows to process
     has_deletions = (
-        "deleted_rows" in st.session_state 
-        and len(st.session_state.deleted_rows) > 0
+        "deleted_rows" in st.session_state and len(st.session_state.deleted_rows) > 0
     )
-    
+
     if not st.session_state.df.equals(st.session_state.edit_df) or has_deletions:
         backup_master_transaction_df(
             data_path=st.session_state.data_path, df=st.session_state.df
         )
-        
+
         # Process deletions if any
         if has_deletions:
             indices_to_delete = list(st.session_state.deleted_rows)
@@ -74,7 +73,7 @@ def save_df():
             st.session_state.session_df = st.session_state.edit_df.copy()
             st.session_state.deleted_rows = set()  # Clear deleted rows
             st.toast(f"Deleted {len(indices_to_delete)} transaction(s)", icon="🗑")
-        
+
         st.session_state.df = st.session_state.edit_df.copy()
         save_master_transaction_df(
             data_path=st.session_state.data_path,
@@ -93,7 +92,7 @@ def update_all_df():
         if "deleted_rows" not in st.session_state:
             st.session_state.deleted_rows = set()
         st.session_state.deleted_rows.update(deleted_indices)
-    
+
     # Handle edits
     if st.session_state["edit_all_df"]["edited_rows"]:
         tmp_df = pd.DataFrame.from_dict(
@@ -127,7 +126,7 @@ if "df" not in st.session_state:
     df["Date"] = pd.to_datetime(df["Date"])
     df["Note"] = df["Note"].astype(str)
     df["SHARED"] = df["SHARED"].astype(bool)
-    
+
     # Sort by date descending (newest first) for default view
     df = df.sort_values("Date", ascending=False).reset_index(drop=True)
     st.session_state.df = df
@@ -247,13 +246,13 @@ with tab2:
                     st.toast(f"Sync failed!\n\n{response['message']}", icon="❌")
 
     st.divider()
-    
+
     # Display info about pending deletions
     if len(st.session_state.deleted_rows) > 0:
         st.warning(
             f"⚠️ {len(st.session_state.deleted_rows)} transaction(s) marked for deletion. "
             "Click 'Save changes' to permanently delete them.",
-            icon="🗑"
+            icon="🗑",
         )
 
     st.data_editor(
