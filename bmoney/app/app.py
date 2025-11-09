@@ -54,29 +54,47 @@ def change_text():
 
 
 def save_df():
-    if not st.session_state.df.equals(st.session_state.edit_df):
+    # Check if there are deleted rows to process
+    has_deletions = (
+        "deleted_rows" in st.session_state 
+        and len(st.session_state.deleted_rows) > 0
+    )
+    
+    if not st.session_state.df.equals(st.session_state.edit_df) or has_deletions:
         backup_master_transaction_df(
             data_path=st.session_state.data_path, df=st.session_state.df
         )
+        
+        # Process deletions if any
+        if has_deletions:
+            indices_to_delete = list(st.session_state.deleted_rows)
+            st.session_state.edit_df = st.session_state.edit_df.drop(
+                indices_to_delete
+            ).reset_index(drop=True)
+            st.session_state.session_df = st.session_state.edit_df.copy()
+            st.session_state.deleted_rows = set()  # Clear deleted rows
+            st.toast(f"Deleted {len(indices_to_delete)} transaction(s)", icon="🗑")
+        
         st.session_state.df = st.session_state.edit_df.copy()
-        # print(st.session_state.edit_df.iloc[1347])
-        # st.session_state.edit_df = apply_transformations(st.session_state.edit_df)
-        # print(st.session_state.edit_df.iloc[1347])
         save_master_transaction_df(
             data_path=st.session_state.data_path,
             df=st.session_state.edit_df,
             verbose=True,
         )
         st.toast("Save successful!", icon="👌")
-        # print(st.session_state.edit_df.iloc[224])
-        # st.session_state.edit_df = st.session_state.df.copy()
-        # print(st.session_state.edit_df.iloc[224])
-        # st.session_state.session_df = st.session_state.df.copy()
     else:
         st.toast("Data has not changed yet...", icon="❌")
 
 
 def update_all_df():
+    # Handle deletions from data_editor
+    if st.session_state["edit_all_df"]["deleted_rows"]:
+        deleted_indices = st.session_state["edit_all_df"]["deleted_rows"]
+        if "deleted_rows" not in st.session_state:
+            st.session_state.deleted_rows = set()
+        st.session_state.deleted_rows.update(deleted_indices)
+    
+    # Handle edits
     if st.session_state["edit_all_df"]["edited_rows"]:
         tmp_df = pd.DataFrame.from_dict(
             st.session_state["edit_all_df"]["edited_rows"], orient="index"
@@ -109,13 +127,16 @@ if "df" not in st.session_state:
     df["Date"] = pd.to_datetime(df["Date"])
     df["Note"] = df["Note"].astype(str)
     df["SHARED"] = df["SHARED"].astype(bool)
-
-    df = df.reset_index(drop=True)
+    
+    # Sort by date descending (newest first) for default view
+    df = df.sort_values("Date", ascending=False).reset_index(drop=True)
     st.session_state.df = df
 if "edit_df" not in st.session_state:
     st.session_state.edit_df = st.session_state.df.copy()
 if "session_df" not in st.session_state:
     st.session_state.session_df = st.session_state.df.copy()
+if "deleted_rows" not in st.session_state:
+    st.session_state.deleted_rows = set()
 # if "edit_all_df" not in st.session_state:
 #     st.session_state.edit_all_df = st.session_state.edit_df.copy()
 # if "edit_slice_df" not in st.session_state:
@@ -226,6 +247,14 @@ with tab2:
                     st.toast(f"Sync failed!\n\n{response['message']}", icon="❌")
 
     st.divider()
+    
+    # Display info about pending deletions
+    if len(st.session_state.deleted_rows) > 0:
+        st.warning(
+            f"⚠️ {len(st.session_state.deleted_rows)} transaction(s) marked for deletion. "
+            "Click 'Save changes' to permanently delete them.",
+            icon="🗑"
+        )
 
     st.data_editor(
         st.session_state.session_df[config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)],
@@ -253,4 +282,5 @@ with tab2:
         height=(num_rows_display + 1) * 35 + 3,
         key="edit_all_df",
         on_change=update_all_df,
+        num_rows="dynamic",  # Enable row deletion
     )
