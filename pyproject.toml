@@ -1,6 +1,6 @@
 [project]
 name = "bmoney"
-version = "0.3.7"
+version = "0.3.8"
 authors = [{name="David Skarbrevik"}]
 license = "MIT"
 license-files = ["LICENSE"]

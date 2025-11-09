@@ -9,6 +9,7 @@ from bmoney.constants import (
     NOT_SHARED_NOTE_MSG,
 )
 from bmoney.utils.config import load_config_file
+from bmoney.utils.deduplication import merge_new_transactions
 import pandas as pd
 import numpy as np
 import os
@@ -108,7 +109,12 @@ def save_master_transaction_df(
 
 
 def update_master_transaction_df(
-    data_path: str = ".", return_df: bool = True, return_msg: bool = False
+    data_path: str = ".",
+    return_df: bool = True,
+    return_msg: bool = False,
+    use_deduplication: bool = True,
+    date_window: int = 7,
+    amount_tolerance: float = 0.50,
 ) -> pd.DataFrame:
     """Adds new transactions to master transaction df.
     Returns new df, saves to disk and creates backup of old df.
@@ -117,6 +123,9 @@ def update_master_transaction_df(
         data_path (str): where your rocket money transaction export csvs are located.
         return_df (bool): whether you want the new df returned. Defaults to True.
         return_msg (bool): whether you want a str status message returned. Defaults to False.
+        use_deduplication (bool): whether to use intelligent deduplication instead of date filtering. Defaults to True.
+        date_window (int): days to look for duplicates when using deduplication. Defaults to 7.
+        amount_tolerance (float): dollar tolerance for fuzzy amount matching. Defaults to 0.50.
     Returns:
         pd.DataFrame: new master df with new transactions
     """
@@ -132,26 +141,51 @@ def update_master_transaction_df(
     ]
     if files:
         print("CSV transaction files found in data dir.")
-        start_date = None
         old_master_rows = 0
         if not df.empty:
-            start_date = df["Date"].max() + timedelta(days=1)
             old_master_rows = df.shape[0]
             print(
                 f"Old master transaction data ends on {df['Date'].max().strftime('%m/%d/%Y')} and has num rows: {old_master_rows}"
             )
             backup_master_transaction_df(data_path, df)
+
+        # Load all new transactions from CSV files
+        new_dfs = []
         for file in files:
             tmp_df = pd.read_csv(file)
             tmp_df["Date"] = pd.to_datetime(tmp_df["Date"])
-            if start_date:
-                tmp_df = tmp_df[tmp_df["Date"] >= start_date]
-            df = pd.concat([df, tmp_df])
+            new_dfs.append(tmp_df)
+
+        new_df = pd.concat(new_dfs, ignore_index=True) if new_dfs else pd.DataFrame()
+
+        if use_deduplication and not new_df.empty:
+            # Use intelligent deduplication instead of date-based filtering
+            df, stats = merge_new_transactions(
+                master_df=df,
+                new_df=new_df,
+                date_window=date_window,
+                amount_tolerance=amount_tolerance,
+                verbose=True,
+            )
+            print(
+                f"\nAdded {stats['transactions_added']} new unique transactions to master."
+            )
+            if stats["removed_count"] > 0:
+                print(f"Removed {stats['removed_count']} duplicate transactions.")
+        else:
+            # Legacy behavior: date-based filtering
+            print("Using legacy date-based filtering (duplicates may occur)...")
+            start_date = None
+            if not df.empty:
+                start_date = df["Date"].max() + timedelta(days=1)
+                new_df = new_df[new_df["Date"] >= start_date]
+            df = pd.concat([df, new_df], ignore_index=True)
+            print(f"Added {df.shape[0] - old_master_rows} new transactions to master.")
     else:
         if return_msg:
             return "No csv files found to update master df with..."
         return None
-    print(f"Added {df.shape[0] - old_master_rows} new transactions to master.")
+
     print("Applying validation checks and transformations...")
     df = apply_transformations(df)
     master_save_path = Path(data_path).joinpath(f"{MASTER_DF_FILENAME}")
