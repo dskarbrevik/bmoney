@@ -115,6 +115,7 @@ def update_master_transaction_df(
     use_deduplication: bool = True,
     date_window: int = 7,
     amount_tolerance: float = 0.50,
+    smart_categories: bool = None,
 ) -> pd.DataFrame:
     """Adds new transactions to master transaction df.
     Returns new df, saves to disk and creates backup of old df.
@@ -126,9 +127,17 @@ def update_master_transaction_df(
         use_deduplication (bool): whether to use intelligent deduplication instead of date filtering. Defaults to True.
         date_window (int): days to look for duplicates when using deduplication. Defaults to 7.
         amount_tolerance (float): dollar tolerance for fuzzy amount matching. Defaults to 0.50.
+        smart_categories (bool): if True, uses smart categorization based on historical name matches. If None, reads from config. Defaults to None.
     Returns:
         pd.DataFrame: new master df with new transactions
     """
+    # Load config to get smart_categories setting if not explicitly provided
+    config = load_config_file(data_path)
+    if smart_categories is None:
+        smart_categories = config.get(
+            "SMART_CATEGORIES", True
+        )  # Default to True if not in config
+
     df = load_master_transaction_df(data_path, validate=False)
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame()
@@ -157,6 +166,11 @@ def update_master_transaction_df(
             new_dfs.append(tmp_df)
 
         new_df = pd.concat(new_dfs, ignore_index=True) if new_dfs else pd.DataFrame()
+
+        # Store the original master for smart categorization
+        master_df_for_learning = (
+            df.copy() if smart_categories and not df.empty else None
+        )
 
         if use_deduplication and not new_df.empty:
             # Use intelligent deduplication instead of date-based filtering
@@ -187,7 +201,13 @@ def update_master_transaction_df(
         return None
 
     print("Applying validation checks and transformations...")
-    df = apply_transformations(df)
+    if smart_categories:
+        print("Using smart categorization based on historical transaction names...")
+        df = apply_transformations(
+            df, smart_categories=True, master_df=master_df_for_learning
+        )
+    else:
+        df = apply_transformations(df)
     master_save_path = Path(data_path).joinpath(f"{MASTER_DF_FILENAME}")
     print(f"Saving new master transaction df to: {master_save_path}")
     df.to_json(master_save_path, orient="records", lines=True)
@@ -199,17 +219,24 @@ def update_master_transaction_df(
         return f"Transaction df updated, new df shape: {df.shape}"
 
 
-def apply_transformations(df: pd.DataFrame) -> pd.DataFrame:
+def apply_transformations(
+    df: pd.DataFrame, smart_categories: bool = False, master_df: pd.DataFrame = None
+) -> pd.DataFrame:
     """Adds columns to the trasnaction dataframe that help with downstream analytics.
 
     Args:
         df (pd.DataFrame): input dataframe
+        smart_categories (bool): if True, uses smart categorization based on historical name matches. Defaults to False.
+        master_df (pd.DataFrame): the master dataframe to learn from when smart_categories is True. Defaults to None.
 
     Returns:
         pd.DataFrame: enriched dataframe
     """
     df = apply_latest(df)
-    df = apply_custom_cat(df)
+    if smart_categories and master_df is not None:
+        df = apply_smart_categories(df, master_df)
+    else:
+        df = apply_custom_cat(df)
     df = apply_uuid(df)
     df = apply_month(df)
     df = apply_year(df)
@@ -287,6 +314,85 @@ def apply_amount_float(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def apply_smart_categories(df: pd.DataFrame, master_df: pd.DataFrame) -> pd.DataFrame:
+    """Intelligently assigns CUSTOM_CAT by learning from historical transactions with matching names.
+
+    For new transactions (those without LATEST_UPDATE), looks through master_df for transactions
+    with the same Name and uses the most recent CUSTOM_CAT assignment. Falls back to standard
+    Category mapping if no match is found.
+
+    Args:
+        df (pd.DataFrame): input transaction dataframe (contains new transactions)
+        master_df (pd.DataFrame): master dataframe to learn from (historical transactions)
+
+    Returns:
+        pd.DataFrame: Same df with CUSTOM_CAT intelligently assigned
+    """
+    config = load_config_file()  # get user config
+
+    # Create a lookup dictionary from master_df: Name -> most recent CUSTOM_CAT
+    # Only use transactions that have been manually categorized (LATEST_UPDATE is set)
+    name_to_cat = {}
+    if (
+        not master_df.empty
+        and "Name" in master_df.columns
+        and "CUSTOM_CAT" in master_df.columns
+    ):
+        # Filter to edited transactions with valid CUSTOM_CAT
+        edited_master = master_df[
+            (pd.notna(master_df.get("LATEST_UPDATE", None)))
+            & (pd.notna(master_df["CUSTOM_CAT"]))
+            & (master_df["CUSTOM_CAT"] != "")
+            & (master_df["CUSTOM_CAT"] != "UNKNOWN")
+        ].copy()
+
+        if not edited_master.empty:
+            # Sort by date descending to get most recent transactions first
+            if "Date" in edited_master.columns:
+                edited_master["Date"] = pd.to_datetime(edited_master["Date"])
+                edited_master = edited_master.sort_values("Date", ascending=False)
+
+            # Build lookup dictionary with most recent CUSTOM_CAT for each Name
+            for _, row in edited_master.iterrows():
+                name = row["Name"]
+                if pd.notna(name) and name not in name_to_cat:
+                    name_to_cat[name] = row["CUSTOM_CAT"]
+
+    def smart_categorize(row):
+        # Determine if row was edited
+        edited_check = False
+        if pd.notna(row["LATEST_UPDATE"]):
+            if isinstance(row["LATEST_UPDATE"], float):
+                edited_check = not math.isnan(row["LATEST_UPDATE"])
+            elif isinstance(row["LATEST_UPDATE"], np.ndarray):
+                edited_check = not np.isnan(row["LATEST_UPDATE"])
+            else:
+                edited_check = True
+
+        # If edited, preserve CUSTOM_CAT unless it's explicitly empty/None
+        if edited_check:
+            # Check if CUSTOM_CAT exists and has a non-empty value
+            if pd.notna(row["CUSTOM_CAT"]) and str(row["CUSTOM_CAT"]).strip():
+                return row["CUSTOM_CAT"]
+            # If CUSTOM_CAT is empty but Category is set, use Category mapping
+            elif pd.notna(row["Category"]) and str(row["Category"]).strip():
+                return config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
+            # If both are empty, fallback to UNKNOWN
+            else:
+                return "UNKNOWN"
+        else:
+            # Not edited: try to learn from historical transactions
+            if pd.notna(row.get("Name")) and row["Name"] in name_to_cat:
+                return name_to_cat[row["Name"]]
+            else:
+                # No match found, use standard Category mapping
+                return config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
+
+    df["CUSTOM_CAT"] = df.apply(smart_categorize, axis=1)
+
+    return df
+
+
 def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
     """Adds a column called CUSTOM_CAT to the transaction dataframe
 
@@ -300,23 +406,26 @@ def apply_custom_cat(df: pd.DataFrame) -> pd.DataFrame:
 
     def custom_cat(row):
         # Determine if row was edited
-        if isinstance(row["LATEST_UPDATE"], float):
-            edited_check = not math.isnan(row["LATEST_UPDATE"])
-        elif isinstance(row["LATEST_UPDATE"], np.ndarray):
-            edited_check = not np.isnan(row["LATEST_UPDATE"])
-        elif not row["LATEST_UPDATE"]:
-            edited_check = False
+        edited_check = False
+        if pd.notna(row["LATEST_UPDATE"]):
+            if isinstance(row["LATEST_UPDATE"], float):
+                edited_check = not math.isnan(row["LATEST_UPDATE"])
+            elif isinstance(row["LATEST_UPDATE"], np.ndarray):
+                edited_check = not np.isnan(row["LATEST_UPDATE"])
+            else:
+                edited_check = True
 
-        # If edited, preserve CUSTOM_CAT and Category unless explicitly cleared
+        # If edited, preserve CUSTOM_CAT unless it's explicitly empty/None
         if edited_check:
+            # Check if CUSTOM_CAT exists and has a non-empty value
+            if pd.notna(row["CUSTOM_CAT"]) and str(row["CUSTOM_CAT"]).strip():
+                return row["CUSTOM_CAT"]
             # If CUSTOM_CAT is empty but Category is set, use Category mapping
-            if not row["CUSTOM_CAT"] and row["Category"]:
+            elif pd.notna(row["Category"]) and str(row["Category"]).strip():
                 return config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
             # If both are empty, fallback to UNKNOWN
-            if not row["CUSTOM_CAT"] and not row["Category"]:
+            else:
                 return "UNKNOWN"
-            # Otherwise, preserve CUSTOM_CAT
-            return row["CUSTOM_CAT"]
         else:
             # Not edited: always map Category to CUSTOM_CAT
             return config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
