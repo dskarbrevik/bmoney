@@ -1,9 +1,7 @@
 """Test smart categorization feature"""
 
-import pytest
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 from bmoney.utils.data import apply_smart_categories, apply_transformations
 
 
