@@ -118,6 +118,8 @@ DEFAULT_CONFIG = {
             "CATEGORIES": "",  # sheet for shared expense custom category monthly totals
         },
         "GCP_SERVICE_ACCOUNT_PATH": "",
+        "START_DATE": "",  # Optional: filter data from this date onwards (YYYY-MM-DD format)
+        "END_DATE": "",  # Optional: filter data up to this date (YYYY-MM-DD format)
     },
     "CUSTOM_WIDGETS": [],
 }

@@ -153,6 +153,7 @@ class GSheetsClient:
                 only_shared=True,
                 return_values=True,
                 start_date=self.gsheets_config.get("START_DATE"),
+                end_date=self.gsheets_config.get("END_DATE"),
             )
             end_range = df.shape[1]
             sheet_range = f"{sheet_name}!A:{chr(64 + end_range)}"
@@ -193,6 +194,7 @@ class GSheetsClient:
                 df,
                 only_shared=True,
                 start_date=self.gsheets_config.get("START_DATE"),
+                end_date=self.gsheets_config.get("END_DATE"),
                 return_values=True,
             )
             end_range = df.shape[1]

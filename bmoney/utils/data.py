@@ -406,6 +406,7 @@ def monthly_gsheets_cost_table(
     only_shared: bool = False,
     return_values: bool = False,
     start_date: str = None,
+    end_date: str = None,
 ) -> pd.DataFrame:
     """Calculates total category spend per month
 
@@ -413,14 +414,19 @@ def monthly_gsheets_cost_table(
         df (pd.DataFrame): transaction df
         only_shared (bool): If True, only return Categories in SHARED_EXPENSES. Defaults to False.
         return_values (bool): If True, returns data as list of lists instead of as dataframe. Defaults to False.
+        start_date (str): Optional start date to filter data (YYYY-MM-DD format). Defaults to None.
+        end_date (str): Optional end date to filter data (YYYY-MM-DD format). Defaults to None.
 
     Returns:
         pd.Series: total category spend per month
     """
     config = load_config_file()  # get user config
-    if start_date:
+    if start_date or end_date:
         df["Date"] = pd.to_datetime(df["Date"])
-        df = df[df["Date"] >= start_date]
+        if start_date:
+            df = df[df["Date"] >= start_date]
+        if end_date:
+            df = df[df["Date"] <= end_date]
     if only_shared:
         df = df[df["SHARED"]]
     cat_df = (
@@ -462,6 +468,7 @@ def transactions_gsheet_table(
     only_shared: bool = False,
     return_values: bool = False,
     start_date: str = None,
+    end_date: str = None,
 ) -> pd.DataFrame:
     """Returns a table of transactions for gsheets
 
@@ -469,6 +476,8 @@ def transactions_gsheet_table(
         df (pd.DataFrame): transaction dataframe
         only_shared (bool): If True, only return Categories in SHARED_EXPENSES. Defaults to False.
         return_values (bool): If True, returns data as list of lists instead of as dataframe. Defaults to False.
+        start_date (str): Optional start date to filter data (YYYY-MM-DD format). Defaults to None.
+        end_date (str): Optional end date to filter data (YYYY-MM-DD format). Defaults to None.
 
     Returns:
         pd.DataFrame: table of transactions for gsheets
@@ -483,8 +492,11 @@ def transactions_gsheet_table(
     df = df[["Date", "Name", "Amount", "CUSTOM_CAT", "Note"]]
     df = df.rename(columns={"CUSTOM_CAT": "Category"})
     df["Date"] = pd.to_datetime(df["Date"])
-    if start_date:
-        df = df[df["Date"] >= start_date]
+    if start_date or end_date:
+        if start_date:
+            df = df[df["Date"] >= start_date]
+        if end_date:
+            df = df[df["Date"] <= end_date]
     df = df.sort_values(by=["Date"], ascending=False, ignore_index=True)
     df["Date"] = df["Date"].dt.strftime("%m/%d/%Y")
     if return_values:
