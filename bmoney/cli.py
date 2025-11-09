@@ -23,12 +23,20 @@ from bmoney.constants import (
     MASTER_COLUMNS,
     CONFIG_JSON_FILENAME,
     DEFAULT_CONFIG,
+    CURRENT_VERSION,
 )
 import pandas as pd
 import os
 from dotenv import load_dotenv
 
 load_dotenv
+
+
+def version_callback(value: bool):
+    if value:
+        typer.echo(f"{CURRENT_VERSION}")
+        raise typer.Exit()
+
 
 app = typer.Typer()
 db_app = typer.Typer()
@@ -37,6 +45,25 @@ config_app = typer.Typer()
 app.add_typer(config_app, name="config")
 gsheets_app = typer.Typer()
 app.add_typer(gsheets_app, name="gsheets")
+
+
+@app.callback()
+def main(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-v",
+            callback=version_callback,
+            is_eager=True,
+            help="Show version and exit.",
+        ),
+    ] = False,
+):
+    """
+    bmoney - Budget Money transaction management CLI
+    """
+    pass
 
 
 @app.command("init")
