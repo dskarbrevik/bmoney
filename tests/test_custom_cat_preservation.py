@@ -1,9 +1,7 @@
 """Test that CUSTOM_CAT is preserved when toggling SHARED field"""
 
-import pytest
 import pandas as pd
 import numpy as np
-from datetime import datetime
 from bmoney.utils.data import apply_custom_cat
 
 
