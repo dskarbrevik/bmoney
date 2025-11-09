@@ -1,5 +1,6 @@
 import typer
 from typing_extensions import Annotated
+from typing import Optional
 from pathlib import Path
 from importlib.util import find_spec
 import subprocess
@@ -123,12 +124,20 @@ def db_update(
             help="Ensure that master transaction file has all necessary cols and features."
         ),
     ] = False,
+    smart_categories: Annotated[
+        Optional[bool],
+        typer.Option(
+            help="Use smart categorization based on historical transaction names. If not specified, uses config.json setting (default: True)."
+        ),
+    ] = None,
 ):
     if not Path(data_dir).exists():
         raise Exception(f"The data dir: '{data_dir}' does not exist!")
     if validate:
         load_master_transaction_df(data_dir, validate=True)
-    response = update_master_transaction_df(data_dir, return_df=False, return_msg=True)
+    response = update_master_transaction_df(
+        data_dir, return_df=False, return_msg=True, smart_categories=smart_categories
+    )
     print(response)
 
 

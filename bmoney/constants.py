@@ -111,6 +111,7 @@ DEFAULT_CONFIG = {
     "NOT_SHARED_NOTE_MSG": NOT_SHARED_NOTE_MSG,
     "CAT_MAP": CAT_MAP,
     "DATA_VIEW_COLS": DATA_VIEW_COLS,
+    "SMART_CATEGORIES": True,  # Use smart categorization based on historical transaction names
     "GSHEETS_CONFIG": {
         "SPREADSHEET_ID": "",
         "SPREADSHEET_TABS": {

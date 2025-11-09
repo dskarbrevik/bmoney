@@ -98,7 +98,14 @@ def update_all_df():
         tmp_df = pd.DataFrame.from_dict(
             st.session_state["edit_all_df"]["edited_rows"], orient="index"
         )
-        st.session_state.edit_df.loc[tmp_df.index, tmp_df.columns] = tmp_df.copy()
+        # Ensure proper dtype for SHARED column if it's being edited
+        if "SHARED" in tmp_df.columns:
+            tmp_df["SHARED"] = tmp_df["SHARED"].astype(bool)
+
+        # Update the dataframe with proper dtype handling
+        for col in tmp_df.columns:
+            st.session_state.edit_df.loc[tmp_df.index, col] = tmp_df[col].values
+
         update_time = int(round(datetime.now().timestamp()))
         st.session_state.edit_df.loc[
             st.session_state["edit_all_df"]["edited_rows"].keys(), "LATEST_UPDATE"
