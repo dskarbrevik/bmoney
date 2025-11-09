@@ -147,7 +147,7 @@ def db_dedup(
     
     original_count = len(df)
     print(f"Original transaction count: {original_count}")
-    print(f"\nSearching for duplicates with:")
+    print("\nSearching for duplicates with:")
     print(f"  - Date window: {date_window} days")
     print(f"  - Amount tolerance: ${amount_tolerance}")
     
