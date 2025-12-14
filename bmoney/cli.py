@@ -230,7 +230,7 @@ def config_update(data_dir: str = "."):
 
 @gsheets_app.command("sync")
 def gsheets_sync(data_dir: str = "."):
-    config = load_config_file()
+    config = load_config_file(path=data_dir)
     if not Path(data_dir).exists():
         print(f"ERROR: The data dir: '{data_dir}' does not exist!")
         return
@@ -255,6 +255,7 @@ def gsheets_sync(data_dir: str = "."):
     gs_client = GSheetsClient(
         sheet_id=spreadsheet_id,
         sa_cred_path=gcp_service_account_path,
+        config_path=data_dir,
     )
     response = gs_client.sync_all_sheets(df)
     print(response["message"])

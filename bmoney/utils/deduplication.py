@@ -78,12 +78,18 @@ def find_fuzzy_duplicates(
         date_min = current["Date"] - timedelta(days=date_window)
         date_max = current["Date"] + timedelta(days=date_window)
 
+        # Handle Account Number matching (including NaNs)
+        if pd.isna(current["Account Number"]):
+            account_match = df["Account Number"].isna()
+        else:
+            account_match = df["Account Number"] == current["Account Number"]
+
         # Find candidates
         candidates = df[
             (df["Date"] >= date_min)
             & (df["Date"] <= date_max)
             & (df["Name"] == current["Name"])
-            & (df["Account Number"] == current["Account Number"])
+            & account_match
             & (df.index != idx)
         ]
 

@@ -382,11 +382,18 @@ def apply_smart_categories(df: pd.DataFrame, master_df: pd.DataFrame) -> pd.Data
                 return "UNKNOWN"
         else:
             # Not edited: try to learn from historical transactions
+
+            # Check if the original category is a "protected" category that should override smart categorization
+            # This prevents bank transfers/payments from being miscategorized based on name matches
+            original_cat_mapping = config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
+            if original_cat_mapping == "BANK TRANS":
+                return original_cat_mapping
+
             if pd.notna(row.get("Name")) and row["Name"] in name_to_cat:
                 return name_to_cat[row["Name"]]
             else:
                 # No match found, use standard Category mapping
-                return config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
+                return original_cat_mapping
 
     df["CUSTOM_CAT"] = df.apply(smart_categorize, axis=1)
 
