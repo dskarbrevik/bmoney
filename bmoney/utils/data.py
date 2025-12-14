@@ -14,7 +14,6 @@ import pandas as pd
 import numpy as np
 import os
 import math
-import uuid
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -222,7 +221,10 @@ def update_master_transaction_df(
 
 
 def apply_transformations(
-    df: pd.DataFrame, smart_categories: bool = False, master_df: pd.DataFrame = None, config: dict = None
+    df: pd.DataFrame,
+    smart_categories: bool = False,
+    master_df: pd.DataFrame = None,
+    config: dict = None,
 ) -> pd.DataFrame:
     """Adds columns to the trasnaction dataframe that help with downstream analytics.
 
@@ -257,9 +259,10 @@ def apply_transformations(
 
 import hashlib
 
+
 def generate_transaction_id(row: pd.Series) -> str:
     """Generates a deterministic hash ID for a transaction.
-    
+
     Uses Date, Name, Amount, and Account Number to create a unique ID.
     """
     # Normalize fields
@@ -267,15 +270,16 @@ def generate_transaction_id(row: pd.Series) -> str:
     name_str = str(row["Name"]).strip().lower() if pd.notna(row["Name"]) else ""
     amount_str = str(round(float(row["Amount"]), 2))
     account_str = str(row["Account Number"]) if pd.notna(row["Account Number"]) else ""
-    
+
     # Create hash input
     hash_input = f"{date_str}|{name_str}|{amount_str}|{account_str}"
-    
+
     return hashlib.sha256(hash_input.encode()).hexdigest()
+
 
 def apply_uuid(df: pd.DataFrame) -> pd.DataFrame:
     """Adds a column called BMONEY_TRANS_ID to the transaction dataframe.
-    
+
     Uses deterministic hashing so that the same transaction always gets the same ID.
     This allows us to detect if a deleted transaction is re-imported.
 
@@ -289,6 +293,7 @@ def apply_uuid(df: pd.DataFrame) -> pd.DataFrame:
     # This effectively migrates old random UUIDs to new hash IDs
     df["BMONEY_TRANS_ID"] = df.apply(lambda row: generate_transaction_id(row), axis=1)
     return df
+
 
 def apply_removed_status(df: pd.DataFrame) -> pd.DataFrame:
     """Adds a column called REMOVED to the transaction dataframe
@@ -304,7 +309,6 @@ def apply_removed_status(df: pd.DataFrame) -> pd.DataFrame:
     else:
         df["REMOVED"] = df["REMOVED"].fillna(False).astype(bool)
     return df
-
 
 
 def apply_note_check(df: pd.DataFrame) -> pd.DataFrame:
@@ -426,7 +430,9 @@ def apply_smart_categories(df: pd.DataFrame, master_df: pd.DataFrame) -> pd.Data
 
             # Check if the original category is a "protected" category that should override smart categorization
             # This prevents bank transfers/payments from being miscategorized based on name matches
-            original_cat_mapping = config.get("CAT_MAP", CAT_MAP).get(row["Category"], "UNKNOWN")
+            original_cat_mapping = config.get("CAT_MAP", CAT_MAP).get(
+                row["Category"], "UNKNOWN"
+            )
             if original_cat_mapping == "BANK TRANS":
                 return original_cat_mapping
 

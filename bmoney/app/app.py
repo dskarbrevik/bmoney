@@ -69,14 +69,16 @@ def save_df():
             indices_to_delete = list(st.session_state.deleted_rows)
             # Mark as removed instead of dropping
             st.session_state.edit_df.loc[indices_to_delete, "REMOVED"] = True
-            
+
             # Update session_df to reflect changes (filtering out removed)
             st.session_state.session_df = st.session_state.edit_df[
                 ~st.session_state.edit_df["REMOVED"]
             ].copy()
-            
+
             st.session_state.deleted_rows = set()  # Clear deleted rows
-            st.toast(f"Marked {len(indices_to_delete)} transaction(s) as removed", icon="🗑")
+            st.toast(
+                f"Marked {len(indices_to_delete)} transaction(s) as removed", icon="🗑"
+            )
 
         st.session_state.df = st.session_state.edit_df.copy()
         save_master_transaction_df(
@@ -137,7 +139,7 @@ if "df" not in st.session_state:
     df["Date"] = pd.to_datetime(df["Date"])
     df["Note"] = df["Note"].astype(str)
     df["SHARED"] = df["SHARED"].astype(bool)
-    
+
     # Ensure REMOVED column exists
     if "REMOVED" not in df.columns:
         df["REMOVED"] = False

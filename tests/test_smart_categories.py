@@ -258,6 +258,7 @@ def test_apply_transformations_with_smart_categories():
             "Note": [""],
             "CUSTOM_CAT": ["Beverages"],
             "LATEST_UPDATE": [1234567890],
+            "Account Number": ["1234"],
         }
     )
 
@@ -268,6 +269,7 @@ def test_apply_transformations_with_smart_categories():
             "Category": ["Dining"],
             "Amount": [6.00],
             "Note": [""],
+            "Account Number": ["1234"],
         }
     )
 
@@ -291,6 +293,7 @@ def test_apply_transformations_without_smart_categories():
             "Note": [""],
             "CUSTOM_CAT": ["Beverages"],
             "LATEST_UPDATE": [1234567890],
+            "Account Number": ["1234"],
         }
     )
 
@@ -301,6 +304,7 @@ def test_apply_transformations_without_smart_categories():
             "Category": ["Groceries"],  # Different category
             "Amount": [6.00],
             "Note": [""],
+            "Account Number": ["1234"],
         }
     )
 
