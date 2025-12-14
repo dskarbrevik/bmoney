@@ -14,7 +14,6 @@ import pandas as pd
 import numpy as np
 import os
 import math
-import hashlib
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -270,6 +269,7 @@ def apply_uuid(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Same df you input with 1 new column "BMONEY_TRANS_ID"
     """
+
     def get_id(row):
         # If row is removed and already has an ID, keep it
         if row.get("REMOVED") and pd.notna(row.get("BMONEY_TRANS_ID")):

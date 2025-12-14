@@ -69,10 +69,12 @@ def save_df():
             indices_to_delete = list(st.session_state.deleted_rows)
             # Mark as removed instead of dropping
             st.session_state.edit_df.loc[indices_to_delete, "REMOVED"] = True
-            
+
             # Clear other columns for privacy/cleanup, but keep ID and REMOVED status
             cols_to_keep = ["BMONEY_TRANS_ID", "REMOVED"]
-            cols_to_clear = [c for c in st.session_state.edit_df.columns if c not in cols_to_keep]
+            cols_to_clear = [
+                c for c in st.session_state.edit_df.columns if c not in cols_to_keep
+            ]
             st.session_state.edit_df.loc[indices_to_delete, cols_to_clear] = None
 
             # Update session_df to reflect changes (filtering out removed)

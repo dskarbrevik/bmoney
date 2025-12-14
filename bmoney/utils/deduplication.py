@@ -313,17 +313,19 @@ def merge_new_transactions(
     # Filter out new transactions that match existing IDs (including removed ones)
     id_duplicates_removed = 0
     initial_new_count = len(new_df)
-    
+
     if "BMONEY_TRANS_ID" in master_df.columns:
         # Generate IDs for new transactions
         new_df["BMONEY_TRANS_ID"] = new_df.apply(generate_transaction_id, axis=1)
-        
+
         existing_ids = set(master_df["BMONEY_TRANS_ID"].dropna())
         new_df = new_df[~new_df["BMONEY_TRANS_ID"].isin(existing_ids)].copy()
         id_duplicates_removed = initial_new_count - len(new_df)
-        
+
         if verbose and id_duplicates_removed > 0:
-            print(f"Removed {id_duplicates_removed} transactions that matched existing IDs (including deleted ones).")
+            print(
+                f"Removed {id_duplicates_removed} transactions that matched existing IDs (including deleted ones)."
+            )
 
     master_df["_IS_EXISTING"] = True
     new_df["_IS_EXISTING"] = False
@@ -349,9 +351,9 @@ def merge_new_transactions(
     # Calculate how many new transactions were actually added
     transactions_added = stats["final_count"] - len(master_df)
     stats["transactions_added"] = transactions_added
-    
+
     # Update stats to include ID-based removals
     stats["removed_count"] += id_duplicates_removed
     stats["id_duplicates_removed"] = id_duplicates_removed
-    
+
     return df_clean, stats
