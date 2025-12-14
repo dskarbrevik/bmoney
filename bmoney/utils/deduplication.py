@@ -78,12 +78,18 @@ def find_fuzzy_duplicates(
         date_min = current["Date"] - timedelta(days=date_window)
         date_max = current["Date"] + timedelta(days=date_window)
 
+        # Handle Account Number matching (including NaNs)
+        if pd.isna(current["Account Number"]):
+            account_match = df["Account Number"].isna()
+        else:
+            account_match = df["Account Number"] == current["Account Number"]
+
         # Find candidates
         candidates = df[
             (df["Date"] >= date_min)
             & (df["Date"] <= date_max)
             & (df["Name"] == current["Name"])
-            & (df["Account Number"] == current["Account Number"])
+            & account_match
             & (df.index != idx)
         ]
 
@@ -279,6 +285,12 @@ def merge_new_transactions(
     # This helps us only deduplicate new against existing, not new against new
     master_df = master_df.copy()
     new_df = new_df.copy()
+
+    # Ensure REMOVED column exists in master_df
+    if "REMOVED" not in master_df.columns:
+        master_df["REMOVED"] = False
+    else:
+        master_df["REMOVED"] = master_df["REMOVED"].fillna(False).astype(bool)
 
     master_df["_IS_EXISTING"] = True
     new_df["_IS_EXISTING"] = False

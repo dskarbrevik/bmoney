@@ -21,13 +21,18 @@ class GSheetsClient:
     """Simple Google Sheets client to get and set data in a spreadsheet."""
 
     def __init__(
-        self, sheet_id: str, sa_cred_path: str = None, oauth_secret_path: str = None
+        self,
+        sheet_id: str,
+        sa_cred_path: str = None,
+        oauth_secret_path: str = None,
+        config_path: str = ".",
     ):
         """
         Args:
             sheet_id (str): ID of gsheet of interest
             sa_cred_path (str, optional): SA cred json path. Must set this OR oauth_secret_path parameter. Defaults to None.
             oauth_secret_path (str, optional): oauth secret json path. Must set this OR sa_cred_path parameter. Defaults to None.
+            config_path (str, optional): Path to directory containing config.json. Defaults to ".".
 
         Raises:
             Exception: _description_
@@ -41,7 +46,7 @@ class GSheetsClient:
         self.oauth_secret_path = oauth_secret_path
         self._authenticate()
         self.service = build("sheets", "v4", credentials=self.creds)
-        self.config = load_config_file()
+        self.config = load_config_file(path=config_path)
         self.gsheets_config = self.config.get("GSHEETS_CONFIG")
 
     def _reauth(self):

@@ -67,12 +67,18 @@ def save_df():
         # Process deletions if any
         if has_deletions:
             indices_to_delete = list(st.session_state.deleted_rows)
-            st.session_state.edit_df = st.session_state.edit_df.drop(
-                indices_to_delete
-            ).reset_index(drop=True)
-            st.session_state.session_df = st.session_state.edit_df.copy()
+            # Mark as removed instead of dropping
+            st.session_state.edit_df.loc[indices_to_delete, "REMOVED"] = True
+
+            # Update session_df to reflect changes (filtering out removed)
+            st.session_state.session_df = st.session_state.edit_df[
+                ~st.session_state.edit_df["REMOVED"]
+            ].copy()
+
             st.session_state.deleted_rows = set()  # Clear deleted rows
-            st.toast(f"Deleted {len(indices_to_delete)} transaction(s)", icon="🗑")
+            st.toast(
+                f"Marked {len(indices_to_delete)} transaction(s) as removed", icon="🗑"
+            )
 
         st.session_state.df = st.session_state.edit_df.copy()
         save_master_transaction_df(
@@ -134,13 +140,22 @@ if "df" not in st.session_state:
     df["Note"] = df["Note"].astype(str)
     df["SHARED"] = df["SHARED"].astype(bool)
 
+    # Ensure REMOVED column exists
+    if "REMOVED" not in df.columns:
+        df["REMOVED"] = False
+    else:
+        df["REMOVED"] = df["REMOVED"].fillna(False).astype(bool)
+
     # Sort by date descending (newest first) for default view
     df = df.sort_values("Date", ascending=False).reset_index(drop=True)
     st.session_state.df = df
 if "edit_df" not in st.session_state:
     st.session_state.edit_df = st.session_state.df.copy()
 if "session_df" not in st.session_state:
-    st.session_state.session_df = st.session_state.df.copy()
+    # Only show non-removed transactions in the editor
+    st.session_state.session_df = st.session_state.df[
+        ~st.session_state.df["REMOVED"]
+    ].copy()
 if "deleted_rows" not in st.session_state:
     st.session_state.deleted_rows = set()
 # if "edit_all_df" not in st.session_state:
