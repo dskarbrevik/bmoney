@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 import os
 import math
+import hashlib
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -255,9 +256,6 @@ def apply_transformations(
     df = apply_note_check(df)
 
     return df
-
-
-import hashlib
 
 
 def generate_transaction_id(row: pd.Series) -> str:
