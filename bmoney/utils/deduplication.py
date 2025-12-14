@@ -11,6 +11,24 @@ import pandas as pd
 import numpy as np
 from typing import Tuple
 from datetime import timedelta
+import hashlib
+
+
+def generate_transaction_id(row: pd.Series) -> str:
+    """Generates a deterministic hash ID for a transaction.
+
+    Uses Date, Name, Amount, and Account Number to create a unique ID.
+    """
+    # Normalize fields
+    date_str = pd.to_datetime(row["Date"]).strftime("%Y-%m-%d")
+    name_str = str(row["Name"]).strip().lower() if pd.notna(row["Name"]) else ""
+    amount_str = str(round(float(row["Amount"]), 2))
+    account_str = str(row["Account Number"]) if pd.notna(row["Account Number"]) else ""
+
+    # Create hash input
+    hash_input = f"{date_str}|{name_str}|{amount_str}|{account_str}"
+
+    return hashlib.sha256(hash_input.encode()).hexdigest()
 
 
 def create_transaction_key(row: pd.Series) -> str:
@@ -292,6 +310,21 @@ def merge_new_transactions(
     else:
         master_df["REMOVED"] = master_df["REMOVED"].fillna(False).astype(bool)
 
+    # Filter out new transactions that match existing IDs (including removed ones)
+    id_duplicates_removed = 0
+    initial_new_count = len(new_df)
+    
+    if "BMONEY_TRANS_ID" in master_df.columns:
+        # Generate IDs for new transactions
+        new_df["BMONEY_TRANS_ID"] = new_df.apply(generate_transaction_id, axis=1)
+        
+        existing_ids = set(master_df["BMONEY_TRANS_ID"].dropna())
+        new_df = new_df[~new_df["BMONEY_TRANS_ID"].isin(existing_ids)].copy()
+        id_duplicates_removed = initial_new_count - len(new_df)
+        
+        if verbose and id_duplicates_removed > 0:
+            print(f"Removed {id_duplicates_removed} transactions that matched existing IDs (including deleted ones).")
+
     master_df["_IS_EXISTING"] = True
     new_df["_IS_EXISTING"] = False
 
@@ -316,8 +349,9 @@ def merge_new_transactions(
     # Calculate how many new transactions were actually added
     transactions_added = stats["final_count"] - len(master_df)
     stats["transactions_added"] = transactions_added
-    stats["new_duplicates_removed"] = (
-        len(new_df) - transactions_added - stats["removed_count"]
-    )
-
+    
+    # Update stats to include ID-based removals
+    stats["removed_count"] += id_duplicates_removed
+    stats["id_duplicates_removed"] = id_duplicates_removed
+    
     return df_clean, stats
