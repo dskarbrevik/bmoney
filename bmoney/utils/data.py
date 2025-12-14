@@ -79,7 +79,8 @@ def load_master_transaction_df(
             backup_master_transaction_df(data_path, df)
             if verbose:
                 print("Applying validation checks and transformations...")
-            df = apply_transformations(df)
+            config = load_config_file(data_path)
+            df = apply_transformations(df, config=config)
             if verbose:
                 print(f"Saving validated dataframe to: '{master_df_path}'")
             df.to_json(master_df_path, orient="records", lines=True)
@@ -100,7 +101,8 @@ def save_master_transaction_df(
     """
     master_save_path = Path(data_path).joinpath(f"{MASTER_DF_FILENAME}")
     if validate:
-        df = apply_transformations(df)
+        config = load_config_file(data_path)
+        df = apply_transformations(df, config=config)
     if verbose:
         print(
             f"Saving new master transaction df to: {master_save_path.resolve().as_posix()}"
@@ -204,10 +206,10 @@ def update_master_transaction_df(
     if smart_categories:
         print("Using smart categorization based on historical transaction names...")
         df = apply_transformations(
-            df, smart_categories=True, master_df=master_df_for_learning
+            df, smart_categories=True, master_df=master_df_for_learning, config=config
         )
     else:
-        df = apply_transformations(df)
+        df = apply_transformations(df, config=config)
     master_save_path = Path(data_path).joinpath(f"{MASTER_DF_FILENAME}")
     print(f"Saving new master transaction df to: {master_save_path}")
     df.to_json(master_save_path, orient="records", lines=True)
@@ -220,7 +222,7 @@ def update_master_transaction_df(
 
 
 def apply_transformations(
-    df: pd.DataFrame, smart_categories: bool = False, master_df: pd.DataFrame = None
+    df: pd.DataFrame, smart_categories: bool = False, master_df: pd.DataFrame = None, config: dict = None
 ) -> pd.DataFrame:
     """Adds columns to the trasnaction dataframe that help with downstream analytics.
 
@@ -228,17 +230,23 @@ def apply_transformations(
         df (pd.DataFrame): input dataframe
         smart_categories (bool): if True, uses smart categorization based on historical name matches. Defaults to False.
         master_df (pd.DataFrame): the master dataframe to learn from when smart_categories is True. Defaults to None.
+        config (dict): configuration dictionary. Defaults to None.
 
     Returns:
         pd.DataFrame: enriched dataframe
     """
+    if config is None:
+        config = load_config_file()
+
     df = apply_latest(df)
     if smart_categories and master_df is not None:
         df = apply_smart_categories(df, master_df)
     else:
         df = apply_custom_cat(df)
     df = apply_uuid(df)
+    df = apply_removed_status(df)
     df = apply_month(df)
+
     df = apply_year(df)
     df = apply_amount_float(df)
     df = apply_shared(df)
@@ -247,23 +255,56 @@ def apply_transformations(
     return df
 
 
+import hashlib
+
+def generate_transaction_id(row: pd.Series) -> str:
+    """Generates a deterministic hash ID for a transaction.
+    
+    Uses Date, Name, Amount, and Account Number to create a unique ID.
+    """
+    # Normalize fields
+    date_str = pd.to_datetime(row["Date"]).strftime("%Y-%m-%d")
+    name_str = str(row["Name"]).strip().lower() if pd.notna(row["Name"]) else ""
+    amount_str = str(round(float(row["Amount"]), 2))
+    account_str = str(row["Account Number"]) if pd.notna(row["Account Number"]) else ""
+    
+    # Create hash input
+    hash_input = f"{date_str}|{name_str}|{amount_str}|{account_str}"
+    
+    return hashlib.sha256(hash_input.encode()).hexdigest()
+
 def apply_uuid(df: pd.DataFrame) -> pd.DataFrame:
-    """Adds a column called UUID to the transaction dataframe
+    """Adds a column called BMONEY_TRANS_ID to the transaction dataframe.
+    
+    Uses deterministic hashing so that the same transaction always gets the same ID.
+    This allows us to detect if a deleted transaction is re-imported.
 
     Args:
         df (pd.DataFrame): input transaction dataframe
 
     Returns:
-        pd.DataFrame: Same df you input with 1 new column "UUID"
+        pd.DataFrame: Same df you input with 1 new column "BMONEY_TRANS_ID"
     """
-    if "BMONEY_TRANS_ID" not in df.columns:
-        bmoney_ids = [str(uuid.uuid4()) for _ in range(df.shape[0])]
-        df["BMONEY_TRANS_ID"] = bmoney_ids
-    else:
-        df["BMONEY_TRANS_ID"] = df["BMONEY_TRANS_ID"].apply(
-            lambda x: x if pd.notna(x) else str(uuid.uuid4())
-        )
+    # Always regenerate IDs to ensure consistency and determinism
+    # This effectively migrates old random UUIDs to new hash IDs
+    df["BMONEY_TRANS_ID"] = df.apply(lambda row: generate_transaction_id(row), axis=1)
     return df
+
+def apply_removed_status(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds a column called REMOVED to the transaction dataframe
+
+    Args:
+        df (pd.DataFrame): input transaction dataframe
+
+    Returns:
+        pd.DataFrame: Same df you input with 1 new column "REMOVED"
+    """
+    if "REMOVED" not in df.columns:
+        df["REMOVED"] = False
+    else:
+        df["REMOVED"] = df["REMOVED"].fillna(False).astype(bool)
+    return df
+
 
 
 def apply_note_check(df: pd.DataFrame) -> pd.DataFrame:

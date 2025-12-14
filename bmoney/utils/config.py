@@ -6,6 +6,7 @@ from bmoney.constants import (
 )
 import importlib.util
 import sys
+import uuid
 
 """
 Controls the config.json file that is used to store user settings.
@@ -21,7 +22,7 @@ def create_config_file(path: str = ".", force: bool = False):
     else:
         if force:
             print("config file exists but overwriting with force...")
-        config_dict = DEFAULT_CONFIG
+        config_dict = DEFAULT_CONFIG.copy()
         with open(config_path.resolve().as_posix(), "w") as file:
             json.dump(config_dict, file, indent=4)
 
@@ -31,13 +32,17 @@ def load_config_file(path: str = ".") -> dict:
     if not Path(path / CONFIG_JSON_FILENAME).exists():
         print("Creating config file.")
         create_config_file(path)
-    with open(Path(path / CONFIG_JSON_FILENAME).resolve().as_posix(), "r") as file:
+    
+    config_path = Path(path / CONFIG_JSON_FILENAME).resolve().as_posix()
+    with open(config_path, "r") as file:
         data = json.load(file)
+    
     if not data:
         print("Config file is empty. Creating new config file.")
         create_config_file(path, force=True)
-    with open(Path(path / CONFIG_JSON_FILENAME).resolve().as_posix(), "r") as file:
-        data = json.load(file)
+        with open(config_path, "r") as file:
+            data = json.load(file)
+            
     return data
 
 

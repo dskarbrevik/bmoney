@@ -286,6 +286,12 @@ def merge_new_transactions(
     master_df = master_df.copy()
     new_df = new_df.copy()
 
+    # Ensure REMOVED column exists in master_df
+    if "REMOVED" not in master_df.columns:
+        master_df["REMOVED"] = False
+    else:
+        master_df["REMOVED"] = master_df["REMOVED"].fillna(False).astype(bool)
+
     master_df["_IS_EXISTING"] = True
     new_df["_IS_EXISTING"] = False
 
