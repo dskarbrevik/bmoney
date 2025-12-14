@@ -9,12 +9,11 @@ from bmoney.constants import (
     NOT_SHARED_NOTE_MSG,
 )
 from bmoney.utils.config import load_config_file
-from bmoney.utils.deduplication import merge_new_transactions
+from bmoney.utils.deduplication import merge_new_transactions, generate_transaction_id
 import pandas as pd
 import numpy as np
 import os
 import math
-import hashlib
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -246,8 +245,8 @@ def apply_transformations(
         df = apply_smart_categories(df, master_df)
     else:
         df = apply_custom_cat(df)
-    df = apply_uuid(df)
     df = apply_removed_status(df)
+    df = apply_uuid(df)
     df = apply_month(df)
 
     df = apply_year(df)
@@ -256,23 +255,6 @@ def apply_transformations(
     df = apply_note_check(df)
 
     return df
-
-
-def generate_transaction_id(row: pd.Series) -> str:
-    """Generates a deterministic hash ID for a transaction.
-
-    Uses Date, Name, Amount, and Account Number to create a unique ID.
-    """
-    # Normalize fields
-    date_str = pd.to_datetime(row["Date"]).strftime("%Y-%m-%d")
-    name_str = str(row["Name"]).strip().lower() if pd.notna(row["Name"]) else ""
-    amount_str = str(round(float(row["Amount"]), 2))
-    account_str = str(row["Account Number"]) if pd.notna(row["Account Number"]) else ""
-
-    # Create hash input
-    hash_input = f"{date_str}|{name_str}|{amount_str}|{account_str}"
-
-    return hashlib.sha256(hash_input.encode()).hexdigest()
 
 
 def apply_uuid(df: pd.DataFrame) -> pd.DataFrame:
@@ -287,9 +269,16 @@ def apply_uuid(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Same df you input with 1 new column "BMONEY_TRANS_ID"
     """
+
+    def get_id(row):
+        # If row is removed and already has an ID, keep it
+        if row.get("REMOVED") and pd.notna(row.get("BMONEY_TRANS_ID")):
+            return row["BMONEY_TRANS_ID"]
+        return generate_transaction_id(row)
+
     # Always regenerate IDs to ensure consistency and determinism
     # This effectively migrates old random UUIDs to new hash IDs
-    df["BMONEY_TRANS_ID"] = df.apply(lambda row: generate_transaction_id(row), axis=1)
+    df["BMONEY_TRANS_ID"] = df.apply(get_id, axis=1)
     return df
 
 
@@ -542,7 +531,7 @@ def apply_month(df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: Same df you input with 1 new column "MONTH"
     """
 
-    df["MONTH"] = df["Date"].apply(lambda x: x.strftime("%m"))
+    df["MONTH"] = df["Date"].apply(lambda x: x.strftime("%m") if pd.notna(x) else None)
 
     return df
 
@@ -557,7 +546,7 @@ def apply_year(df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: Same df you input with 1 new column "YEAR"
     """
 
-    df["YEAR"] = df["Date"].apply(lambda x: x.strftime("%y"))
+    df["YEAR"] = df["Date"].apply(lambda x: x.strftime("%y") if pd.notna(x) else None)
 
     return df
 
