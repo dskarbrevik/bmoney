@@ -148,9 +148,11 @@ if "data_path" not in st.session_state:
 if "df" not in st.session_state:
     df = load_master_transaction_df(st.session_state.data_path, verbose=False)
     if df is None:
-        st.error("Failed to load transaction data. Please ensure the master file exists.")
+        st.error(
+            "Failed to load transaction data. Please ensure the master file exists."
+        )
         st.stop()
-    
+
     df["Date"] = pd.to_datetime(df["Date"])
     df["Note"] = df["Note"].astype(str)
     df["SHARED"] = df["SHARED"].astype(bool)
@@ -184,8 +186,10 @@ if "deleted_rows" not in st.session_state:
 try:
     gsheets_config = config.get("GSHEETS_CONFIG") or {}
     sheet_id = gsheets_config.get("SPREADSHEET_ID") or os.getenv("SPREADSHEET_ID")
-    sa_cred_path = gsheets_config.get("GCP_SERVICE_ACCOUNT_PATH") or os.getenv("GCP_SERVICE_ACCOUNT_PATH")
-    
+    sa_cred_path = gsheets_config.get("GCP_SERVICE_ACCOUNT_PATH") or os.getenv(
+        "GCP_SERVICE_ACCOUNT_PATH"
+    )
+
     if sheet_id and sa_cred_path:
         gclient = GSheetsClient(
             sheet_id=sheet_id,
