@@ -294,7 +294,9 @@ def apply_removed_status(df: pd.DataFrame) -> pd.DataFrame:
     if "REMOVED" not in df.columns:
         df["REMOVED"] = False
     else:
-        df["REMOVED"] = df["REMOVED"].fillna(False).astype(bool)
+        df["REMOVED"] = (
+            df["REMOVED"].fillna(False).infer_objects(copy=False).astype(bool)
+        )
     return df
 
 
