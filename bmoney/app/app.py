@@ -87,7 +87,11 @@ def save_df():
                 f"Marked {len(indices_to_delete)} transaction(s) as removed", icon="🗑"
             )
 
+        # Update both df and session_df to match edit_df
         st.session_state.df = st.session_state.edit_df.copy()
+        st.session_state.session_df = st.session_state.edit_df[
+            ~st.session_state.edit_df["REMOVED"]
+        ].copy()
         save_master_transaction_df(
             data_path=st.session_state.data_path,
             df=st.session_state.edit_df,
@@ -143,6 +147,10 @@ if "data_path" not in st.session_state:
 
 if "df" not in st.session_state:
     df = load_master_transaction_df(st.session_state.data_path, verbose=False)
+    if df is None:
+        st.error("Failed to load transaction data. Please ensure the master file exists.")
+        st.stop()
+    
     df["Date"] = pd.to_datetime(df["Date"])
     df["Note"] = df["Note"].astype(str)
     df["SHARED"] = df["SHARED"].astype(bool)
@@ -174,12 +182,17 @@ if "deleted_rows" not in st.session_state:
 
 # google spreadsheets client init
 try:
-    gclient = GSheetsClient(
-        sheet_id=config.get("GSHEETS_CONFIG").get("SPREADSHEET_ID")
-        or os.getenv("SPREADSHEET_ID"),
-        sa_cred_path=config.get("GSHEETS_CONFIG").get("GCP_SERVICE_ACCOUNT_PATH")
-        or os.getenv("GCP_SERVICE_ACCOUNT_PATH"),
-    )
+    gsheets_config = config.get("GSHEETS_CONFIG") or {}
+    sheet_id = gsheets_config.get("SPREADSHEET_ID") or os.getenv("SPREADSHEET_ID")
+    sa_cred_path = gsheets_config.get("GCP_SERVICE_ACCOUNT_PATH") or os.getenv("GCP_SERVICE_ACCOUNT_PATH")
+    
+    if sheet_id and sa_cred_path:
+        gclient = GSheetsClient(
+            sheet_id=sheet_id,
+            sa_cred_path=sa_cred_path,
+        )
+    else:
+        gclient = None
 except Exception:
     gclient = None
     # st.warning("Google Sheets client failed to initialize.")
@@ -223,13 +236,14 @@ with tab1:
                 )
             col += 1
 
-    if config.get("CUSTOM_WIDGETS"):
-        custom_num_cols = len(config.get("CUSTOM_WIDGETS"))
+    custom_widgets = config.get("CUSTOM_WIDGETS")
+    if custom_widgets:
+        custom_num_cols = len(custom_widgets)
         custom_num_cols = max(custom_num_cols, 5)
         st.subheader("Custom Widgets")
         custom_columns = st.columns(custom_num_cols)
         cols = 0
-        for widget in config.get("CUSTOM_WIDGETS"):
+        for widget in custom_widgets:
             with custom_columns[cols]:
                 widget_data = cached_run_custom_script(
                     script_path=widget.get("script_path"),
@@ -285,7 +299,9 @@ with tab2:
         )
 
     st.data_editor(
-        st.session_state.session_df[config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)],
+        st.session_state.session_df[
+            config.get("DATA_VIEW_COLS", DATA_VIEW_COLS)
+        ].reset_index(drop=True),
         column_config={
             "SHARED": st.column_config.CheckboxColumn("SHARED", pinned=True),
             "CUSTOM_CAT": st.column_config.SelectboxColumn(
