@@ -61,7 +61,7 @@ def backup_master_transaction_df(
 
 def load_master_transaction_df(
     data_path: str, validate: bool = False, verbose: bool = True
-) -> None:
+) -> pd.DataFrame | None:
     """Updates the master jsonl with any csvs in the data_path
 
     Args:
@@ -657,14 +657,14 @@ def transactions_gsheet_table(
     return df
 
 
-def last_30_cat_spend(df: pd.DataFrame) -> pd.DataFrame:
+def last_30_cat_spend(df: pd.DataFrame) -> tuple[pd.DataFrame, datetime, datetime]:
     """Calculates spend across categories in last 30 days and delta from 30 days before that.
 
     Args:
         df (pd.DataFrame): transaction dataframe
 
     Returns:
-        pd.DataFrame: calculated metrics
+        tuple[pd.DataFrame, datetime, datetime]: calculated metrics dataframe, start date, and end date
     """
     end_date = datetime.now()
     start_date = datetime.now() - timedelta(days=30)
